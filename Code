@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract SOS is ERC20 {
+    /// @notice Controller (deployer) of THIS SOS instance
+    address public immutable controller;
+    
+    /// @notice Controller of the PREVIOUS SOS instance (lineage)
+    address public immutable previousController;
+    
+    /// @notice Atomic mint unit (1 wei of SOS)
+    uint256 public constant ATOMIC_MINT = 1;
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        address previousController_
+    ) ERC20(name_, symbol_) {
+        controller = msg.sender;
+        previousController = previousController_;
+    }
+
+    /**
+     * @notice Mint exactly 1 atomic unit to msg.sender
+     * @dev Permissionless, costs gas, non-inflationary in practice
+     */
+    function mint() external {
+        _mint(msg.sender, ATOMIC_MINT);
+    }
+
+    // ============ NO BURN ============
+    // Prevent transfer to zero address (burn)
+    function _update(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        // Allow only minting (from == address(0))
+        require(from == address(0), "Transfers disabled forever");
+        
+        // Explicitly prevent burn
+        require(to != address(0), "Burn disabled forever");
+        
+        super._update(from, to, amount);
+    }
+
+    // ============ NO TRANSFERS (NO SWAP, NO DEX) ============
+    function transfer(address, uint256) public pure override returns (bool) {
+        revert("Transfers, swaps, or LP interactions disabled forever");
+    }
+    
+    function transferFrom(address, address, uint256) public pure override returns (bool) {
+        revert("Transfers, swaps, or LP interactions disabled forever");
+    }
+
+    // ============ NO APPROVE ============
+    function approve(address, uint256) public pure override returns (bool) {
+        revert("Approvals disabled forever");
+    }
+    
+    function increaseAllowance(address, uint256) public pure returns (bool) {
+        revert("Allowances disabled forever");
+    }
+    
+    function decreaseAllowance(address, uint256) public pure returns (bool) {
+        revert("Allowances disabled forever");
+    }
+
+    // ============ NO SELFDESTRUCT ============
+    // No selfdestruct function at all
+    
+    // ============ NO PROXY PATTERNS ============
+    // No initializer function (UUPS/Transparent proxy patterns)
+    // No storage gaps for upgradeability
+    // No delegatecall functionality
+
+    // ============ REJECT ALL CALLS EXCEPT MINT ============
+    fallback() external payable {
+        revert("No calls allowed except mint");
+    }
+    
+    // ============ REJECT ETH ============
+    receive() external payable {
+        revert("Cannot receive ETH");
+    }
+}
