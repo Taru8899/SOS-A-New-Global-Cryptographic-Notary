@@ -1,0 +1,130 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract SOS is ERC20 {
+    /// @notice Controller (deployer) of THIS SOS instance
+    address public immutable controller;
+    
+    /// @notice Controller of the PREVIOUS SOS instance (lineage)
+    address public immutable previousController;
+    
+    /// @notice Atomic mint unit (1 wei of SOS)
+    uint256 public constant ATOMIC_MINT = 1;
+
+    /// @notice Struct to record atomic mint metadata with trust weight
+    struct MintRecord {
+        uint256 amount;       // always 1 atomic unit
+        uint256 chainId;      // chain used for minting
+        uint256 gasPaid;      // gas spent (in wei)
+        uint256 timestamp;    // block timestamp of mint
+        uint256 trustWeight;  // chain reliability weight
+    }
+
+    /// @notice Mapping from minter to their mint history
+    mapping(address => MintRecord[]) public mintHistory;
+
+    /// @notice Chain ID → trust weight mapping (set by controller)
+    mapping(uint256 => uint256) public chainTrustWeight;
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        address previousController_
+    ) ERC20(name_, symbol_) {
+        controller = msg.sender;
+        previousController = previousController_;
+    }
+
+    // ============ CONTROLLER FUNCTIONS ============
+    /// @notice Set trust weight for a specific chain
+    function setChainTrustWeight(uint256 chainId, uint256 weight) external {
+        require(msg.sender == controller, "Only controller can set weight");
+        chainTrustWeight[chainId] = weight;
+    }
+
+    // ============ MINT ============
+    /**
+     * @notice Mint exactly 1 atomic unit to another address
+     * @dev Cannot mint to yourself; stores mint metadata
+     * @param recipient Address to mint to
+     * @param chainId_ Chain ID used for minting
+     * @param gasPaid_ Gas spent on minting
+     */
+    function mint(address recipient, uint256 chainId_, uint256 gasPaid_) external {
+        require(recipient != msg.sender, "Cannot mint for yourself");
+
+        _mint(recipient, ATOMIC_MINT);
+
+        uint256 weight = chainTrustWeight[chainId_];
+
+        // Store mint metadata
+        MintRecord memory record = MintRecord({
+            amount: ATOMIC_MINT,
+            chainId: chainId_,
+            gasPaid: gasPaid_,
+            timestamp: block.timestamp,
+            trustWeight: weight
+        });
+        mintHistory[recipient].push(record);
+    }
+
+    // ============ NO BURN ============
+    function _update(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        require(from == address(0), "Transfers disabled forever");
+        require(to != address(0), "Burn disabled forever");
+        super._update(from, to, amount);
+    }
+
+    // ============ NO TRANSFERS ============
+    function transfer(address, uint256) public pure override returns (bool) {
+        revert("Transfers, swaps, or LP interactions disabled forever");
+    }
+    function transferFrom(address, address, uint256) public pure override returns (bool) {
+        revert("Transfers, swaps, or LP interactions disabled forever");
+    }
+
+    // ============ NO APPROVE ============
+    function approve(address, uint256) public pure override returns (bool) {
+        revert("Allowances disabled forever");
+    }
+    function increaseAllowance(address, uint256) public pure returns (bool) {
+        revert("Allowances disabled forever");
+    }
+    function decreaseAllowance(address, uint256) public pure returns (bool) {
+        revert("Allowances disabled forever");
+    }
+
+    // ============ NO SELFDESTRUCT / NO PROXY ============
+    fallback() external payable {
+        revert("No calls allowed except mint");
+    }
+    receive() external payable {
+        revert("Cannot receive ETH");
+    }
+
+    // ============ VIEW HELPERS ============
+    function mintCount(address account) external view returns (uint256) {
+        return mintHistory[account].length;
+    }
+
+    function getMint(address account, uint256 index) external view returns (MintRecord memory) {
+        require(index < mintHistory[account].length, "Index out of bounds");
+        return mintHistory[account][index];
+    }
+
+    /// @notice Computes weighted SOS value for an address
+    function weightedBalance(address account) external view returns (uint256) {
+        MintRecord[] memory records = mintHistory[account];
+        uint256 total;
+        for (uint256 i = 0; i < records.length; i++) {
+            total += records[i].amount * records[i].trustWeight;
+        }
+        return total;
+    }
+}
