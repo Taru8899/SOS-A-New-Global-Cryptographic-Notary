@@ -1,0 +1,162 @@
+Deploying and using SOS in a mix of online deployment + offline local nodes, tailored for areas like Transnistria:
+
+
+---
+
+Step 0 — Preconditions
+
+You have Solidity code for SOS (mint-only, non-transferrable, proof-of-action).
+
+You have access to a machine that can deploy an Ethereum contract online.
+
+Offline users have access to local Ethereum nodes or private testnets (even LAN-based).
+
+
+
+---
+
+Step 1 — Deploy the Original SOS Online
+
+1. Choose a public Ethereum network (mainnet or testnet for experimentation).
+
+
+2. Deploy the SOS contract using the original Solidity code:
+
+Set name_ and symbol_.
+
+Set previousController_ = address(0) (first deployment).
+
+
+
+3. Record the contract address and the controller (deployer) address.
+
+
+
+✅ This creates the official, public reference SOS contract.
+
+All offline instances will eventually reference this address as previousController.
+
+
+
+---
+
+Step 2 — Setup Local Offline Nodes
+
+Each group can run a local Ethereum node or private testnet:
+
+Geth / Besu / Nethermind or Ganache / Hardhat local blockchain.
+
+No Internet required for minting SOS locally.
+
+
+Each offline node deploys its own SOS contract:
+
+Set previousController_ = <original online SOS contract>
+
+This maintains lineage so offline SOS tokens are cryptographically linked to the global chain.
+
+
+
+
+---
+
+Step 3 — Mint SOS Offline
+
+1. Local users generate wallets (addresses).
+
+
+2. Mint SOS to other addresses only:
+
+mint(address recipient)
+
+
+3. Transactions are stored on the local blockchain ledger.
+
+
+4. Recipients can verify proof entirely offline by inspecting the local chain.
+
+
+
+✅ No Internet, no bank, no ID needed.
+
+
+---
+
+Step 4 — Periodic Online Synchronization
+
+1. When possible, connect the offline node to the Internet.
+
+
+2. Use a bridge or aggregator script to:
+
+Extract offline SOS transactions.
+
+Submit them to the public online SOS contract as proof.
+
+
+
+3. Optional: deploy helper contracts or scripts that replicate offline SOS mints to the main contract while keeping original timestamps and addresses intact.
+
+
+
+This synchronizes local activity with the global ledger while keeping autonomy.
+
+
+
+---
+
+Step 5 — Verification
+
+Anyone can verify SOS tokens using:
+
+Local ledger (offline proof)
+
+Public contract (online proof, synchronized periodically)
+
+
+The lineage reference (previousController) ensures trust across offline and online deployments.
+
+
+
+---
+
+Step 6 — Repeat
+
+Offline groups continue minting SOS to recipients.
+
+Occasionally, they synchronize to the public chain to maintain global verifiability.
+
+The SOS system thus becomes a hybrid offline-online proof-of-action network.
+
+
+
+---
+
+Visual Summary of Workflow
+
+1. Online deployment → Original SOS contract
+
+
+2. Offline groups → Deploy local SOS referencing previousController
+
+
+3. Offline minting → Mint for recipients
+
+
+4. Optional sync → Push offline mints to online contract periodically
+
+
+5. Verification → Local ledger or online contract
+
+
+
+
+---
+
+Important Notes
+
+Gas for offline minting: If using a local private network, gas can be fake/minimal for testing.
+
+Global proof requires syncing: Offline-only activity will not appear in public verifiable history until synchronized.
+
+Security: Offline nodes must be trusted by the group; if compromised, offline proof could be manipulated before syncing.
