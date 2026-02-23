@@ -1,0 +1,59 @@
+// bulkMintBot.js
+// Node.js + ethers.js script for SOS contract atomic minting
+
+import { ethers } from "ethers";
+import dotenv from "dotenv";
+dotenv.config();
+
+// -----------------------------
+// CONFIGURATION
+// -----------------------------
+const RPC_URL = process.env.RPC_URL;           // Ethereum node / L2 RPC
+const PRIVATE_KEY = process.env.PRIVATE_KEY;   // Wallet to pay gas
+const SOS_ADDRESS = process.env.SOS_ADDRESS;   // Deployed SOS contract
+const RECIPIENT = process.env.RECIPIENT;       // Recipient address
+const TOTAL_MINTS = parseInt(process.env.TOTAL_MINTS || "1000"); // Total mints to perform
+const BATCH_SIZE = 50; // Number of mints per loop batch (avoid mem/gas issues)
+
+// -----------------------------
+// SOS ABI (mint function only)
+// -----------------------------
+const SOS_ABI = [
+    "function mint(address recipient) external"
+];
+
+// -----------------------------
+// PROVIDER & WALLET
+// -----------------------------
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const contract = new ethers.Contract(SOS_ADDRESS, SOS_ABI, wallet);
+
+async function main() {
+    console.log(`Starting bulk mint: ${TOTAL_MINTS} SOS to ${RECIPIENT}`);
+
+    let minted = 0;
+
+    while (minted < TOTAL_MINTS) {
+        const batch = Math.min(BATCH_SIZE, TOTAL_MINTS - minted);
+
+        for (let i = 0; i < batch; i++) {
+            try {
+                const tx = await contract.mint(RECIPIENT);
+                console.log(`Minted 1 SOS #${minted + 1}, tx hash: ${tx.hash}`);
+                await tx.wait(); // wait for confirmation
+                minted++;
+            } catch (err) {
+                console.error("Mint failed:", err);
+                // Optionally retry
+            }
+        }
+    }
+
+    console.log(`✅ Finished minting ${TOTAL_MINTS} SOS`);
+}
+
+main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+});
