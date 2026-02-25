@@ -1,0 +1,60 @@
+
+
+SOS4 Structure Model Summary
+
+1. Raw SOS
+
+Core, unwrapped token representing the “true” SOS.
+
+Acts as the underlying asset for wrapped SOS derivatives.
+
+Owner control is strong and immutable: raw SOS cannot be forcibly seized or transferred by others.
+
+Provides a backing mechanism for wrapped SOS.
+
+
+2. Wrapped SOS
+
+Tradable token representing raw SOS in a derivative form.
+
+Can be freely transferred on markets.
+
+Minting is allowed only up to the available balance in raw SOS (prevents oversupply).
+
+Includes a bonus mint incentive for users minting wrapped SOS.
+
+
+3. Dual-Layer System
+
+Layer 1: Raw SOS (base, secure, immutable).
+
+Layer 2: Wrapped SOS (flexible, tradable, bonus-enabled).
+
+Lineage & Trust Verification: Wrapped SOS references the raw SOS lineage to maintain integrity and prevent mint bypass.
+
+Optional recursive lineage aggregation for tracking historical balances across SOS generations.
+
+
+4. Stability Mechanisms
+
+Two-layer wrapped SOS stability: safeguards the system from extreme volatility or minting abuse.
+
+Ethereum gas cost-backed: minting and stability functions are tuned to ETH gas cost considerations.
+
+Time-based minting: last stage or bonus stability mechanisms can be triggered or time-locked.
+
+
+5. Economic Incentives
+
+Bonus minting encourages liquidity in wrapped SOS while keeping raw SOS secure.
+
+Lineage-based trust system ensures wrapped SOS can be verified and prevents fraudulent over-minting.
+
+
+This structure essentially creates a hybrid system:
+
+Raw SOS → secure, immutable store of value.
+
+Wrapped SOS → tradable, bonus-incentivized token, lineage-verified for integrity.
+
+Dual-layer design → ensures economic stability, trust, and controlled minting while allowing free market operations.
