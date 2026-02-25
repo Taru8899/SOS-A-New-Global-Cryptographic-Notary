@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract SOS is ERC20 {
+    /// @notice Controller (deployer) of THIS SOS instance (metadata only)
+    address public immutable controller;
+
+    /// @notice Parent SOS contract in lineage
+    address public immutable parentContract;
+
+    /// @notice Code hash of parent contract
+    bytes32 public immutable parentCodeHash;
+
+    /// @notice Deterministic lineage hash
+    bytes32 public immutable lineageHash;
+
+    /// @notice Controller of the PREVIOUS SOS instance (metadata only)
+    address public immutable previousController;
+
+    /// @notice Whether this instance is an emergency patched branch
+    bool public immutable emergencyPatch;
+
+    /// @notice Atomic mint unit (1 wei of SOS)
+    uint256 public constant ATOMIC_MINT = 1;
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        address parentContract_,
+        address previousController_,
+        bool emergencyPatch_
+    ) ERC20(name_, symbol_) {
+
+        controller = msg.sender;
+        parentContract = parentContract_;
+        previousController = previousController_;
+        emergencyPatch = emergencyPatch_;
+
+        // ===== Lineage Logic =====
+
+        if (parentContract_ == address(0)) {
+            // Genesis deployment
+            parentCodeHash = bytes32(0);
+            lineageHash = keccak256(
+                abi.encodePacked(
+                    bytes32(0),
+                    address(this),
+                    block.chainid
+                )
+            );
+        } else {
+            parentCodeHash = parentContract_.codehash;
+
+            bytes32 parentLineageHash = SOS(parentContract_).lineageHash();
+
+            lineageHash = keccak256(
+                abi.encodePacked(
+                    parentLineageHash,
+                    address(this),
+                    block.chainid,
+                    emergencyPatch_
+                )
+            );
+        }
+    }
+
+    /**
+     * @notice Mint exactly 1 atomic unit to another address
+     * @dev Permissionless, costs gas, cannot mint to self
+     */
+    function mint(address recipient) external {
+        require(recipient != msg.sender, "Cannot mint for yourself");
+        _mint(recipient, ATOMIC_MINT);
+    }
+
+    // ============ NO BURN / NO TRANSFERS ============
+    function _update(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        // Only allow minting
+        require(from == address(0), "Transfers disabled forever");
+        require(to != address(0), "Burn disabled forever");
+
+        super._update(from, to, amount);
+    }
+
+    // ============ DISABLE TRANSFERS ============
+    function transfer(address, uint256) public pure override returns (bool) {
+        revert("Transfers disabled forever");
+    }
+
+    function transferFrom(address, address, uint256) public pure override returns (bool) {
+        revert("Transfers disabled forever");
+    }
+
+    // ============ DISABLE ALLOWANCES ============
+    function approve(address, uint256) public pure override returns (bool) {
+        revert("Allowances disabled forever");
+    }
+
+    function increaseAllowance(address, uint256) public pure returns (bool) {
+        revert("Allowances disabled forever");
+    }
+
+    function decreaseAllowance(address, uint256) public pure returns (bool) {
+        revert("Allowances disabled forever");
+    }
+
+    // ============ REJECT ETH ============
+    fallback() external payable {
+        revert("No calls allowed except mint");
+    }
+
+    receive() external payable {
+        revert("Cannot receive ETH");
+    }
+}
