@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./SOS.sol";
+
+contract SOSFactory {
+
+    event Deployed(address indexed addr, bytes32 salt);
+
+    function deploy(
+        bytes32 salt,
+        string memory name_,
+        string memory symbol_,
+        address parentContract_,
+        address previousController_,
+        bool emergencyPatch_,
+        bytes32 enforcedCodeHash_
+    ) external returns (address) {
+
+        address addr = address(
+            new SOS{salt: salt}(
+                name_,
+                symbol_,
+                parentContract_,
+                previousController_,
+                emergencyPatch_,
+                enforcedCodeHash_
+            )
+        );
+
+        emit Deployed(addr, salt);
+        return addr;
+    }
+
+    function predictAddress(
+        bytes32 salt,
+        bytes memory bytecode
+    ) external view returns (address) {
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff),
+                address(this),
+                salt,
+                keccak256(bytecode)
+            )
+        );
+
+        return address(uint160(uint(hash)));
+    }
+}
