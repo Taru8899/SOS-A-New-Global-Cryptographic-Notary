@@ -1,0 +1,283 @@
+
+
+1️⃣ File Structure
+
+/WrappedSOS/
+│
+├─ contracts/
+│   ├─ VerifiedWrappedSOS.sol      # Tradable, lineage-aware wrapped SOS
+│   └─ VerifiedWrappedSOSFactory.sol # Deterministic CREATE2 factory
+│
+├─ scripts/
+│   ├─ deploy.js                   # Example deployment script (Hardhat/ethers.js)
+│   └─ computeAddress.js           # Compute deterministic CREATE2 addresses
+│
+└─ tests/
+    └─ WrappedSOS.test.js          # Unit tests for mint, bulkMint, transfers, freeze
+
+
+---
+
+2️⃣ contracts/VerifiedWrappedSOS.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+interface ILineageBalance {
+    function lineageBalanceOf(address account) external view returns (uint256);
+    function lineageHash() external view returns (bytes32);
+}
+
+contract VerifiedWrappedSOS {
+    string public name;
+    string public symbol;
+    uint8 public constant decimals = 18;
+
+    ILineageBalance public immutable sos;       // underlying SOS
+    bool public immutable emergencyFreeze;
+
+    bytes32 public immutable expectedCodeHash;
+    bytes32 public immutable expectedLineageHash;
+
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+    uint256 public totalSupply;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Mint(address indexed minter, address indexed recipient, uint256 value);
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        address sosAddress_,
+        bool emergencyFreeze_,
+        bytes32 expectedCodeHash_,
+        bytes32 expectedLineageHash_
+    ) {
+        require(sosAddress_ != address(0), "SOS zero address");
+
+        name = name_;
+        symbol = symbol_;
+        sos = ILineageBalance(sosAddress_);
+        emergencyFreeze = emergencyFreeze_;
+        expectedCodeHash = expectedCodeHash_;
+        expectedLineageHash = expectedLineageHash_;
+
+        // Optional code hash verification
+        if (expectedCodeHash_ != bytes32(0)) {
+            require(
+                keccak256(abi.encodePacked(address(sos).code)) == expectedCodeHash_,
+                "SOS code hash mismatch"
+            );
+        }
+
+        // Optional lineage hash verification
+        if (expectedLineageHash_ != bytes32(0)) {
+            try sos.lineageHash() returns (bytes32 h) {
+                require(h == expectedLineageHash_, "SOS lineage mismatch");
+            } catch {
+                revert("Failed to read SOS lineage");
+            }
+        }
+    }
+
+    // ================= MINT =================
+    function mint() public {
+        require(!emergencyFreeze, "Mint frozen");
+
+        uint256 userSOS;
+        try sos.lineageBalanceOf(msg.sender) returns (uint256 total) {
+            userSOS = total;
+        } catch {
+            userSOS = 0;
+        }
+
+        uint256 wrappedBalance = balanceOf[msg.sender];
+        require(userSOS > wrappedBalance, "Nothing to mint");
+
+        uint256 toMint = userSOS - wrappedBalance;
+        balanceOf[msg.sender] += toMint;
+        totalSupply += toMint;
+
+        emit Transfer(address(0), msg.sender, toMint);
+        emit Mint(msg.sender, msg.sender, toMint);
+    }
+
+    function bulkMint(uint256 units) external {
+        require(!emergencyFreeze, "Mint frozen");
+        require(units > 0, "Units must be > 0");
+
+        uint256 userSOS;
+        try sos.lineageBalanceOf(msg.sender) returns (uint256 total) {
+            userSOS = total;
+        } catch {
+            userSOS = 0;
+        }
+
+        uint256 wrappedBalance = balanceOf[msg.sender];
+        uint256 available = userSOS - wrappedBalance;
+        require(available > 0, "No units to mint");
+
+        uint256 toMint = units > available ? available : units;
+        balanceOf[msg.sender] += toMint;
+        totalSupply += toMint;
+
+        emit Transfer(address(0), msg.sender, toMint);
+        emit Mint(msg.sender, msg.sender, toMint);
+    }
+
+    // ================= ERC20 TRANSFERS =================
+    function transfer(address to, uint256 amount) external returns (bool) {
+        require(to != address(0), "Zero address");
+        uint256 senderBalance = balanceOf[msg.sender];
+        require(senderBalance >= amount, "Insufficient balance");
+
+        balanceOf[msg.sender] = senderBalance - amount;
+        balanceOf[to] += amount;
+
+        emit Transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        require(spender != address(0), "Zero address");
+        allowance[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(to != address(0), "Zero address");
+        uint256 senderAllowance = allowance[from][msg.sender];
+        uint256 fromBalance = balanceOf[from];
+        require(senderAllowance >= amount, "Allowance exceeded");
+        require(fromBalance >= amount, "Insufficient balance");
+
+        allowance[from][msg.sender] = senderAllowance - amount;
+        balanceOf[from] = fromBalance - amount;
+        balanceOf[to] += amount;
+
+        emit Transfer(from, to, amount);
+        return true;
+    }
+
+    receive() external payable { revert("Cannot receive ETH"); }
+    fallback() external payable { revert("Invalid call"); }
+}
+
+
+---
+
+3️⃣ contracts/VerifiedWrappedSOSFactory.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./VerifiedWrappedSOS.sol";
+
+contract VerifiedWrappedSOSFactory {
+
+    event WrappedSOSDeployed(
+        address indexed wrapper,
+        address indexed sos,
+        bytes32 salt
+    );
+
+    function deployVerifiedWrappedSOS(
+        string memory name,
+        string memory symbol,
+        address sosAddress,
+        bool emergencyFreeze,
+        bytes32 expectedCodeHash,
+        bytes32 expectedLineageHash,
+        bytes32 salt
+    ) external returns (address wrapper) {
+        bytes memory bytecode = abi.encodePacked(
+            type(VerifiedWrappedSOS).creationCode,
+            abi.encode(
+                name,
+                symbol,
+                sosAddress,
+                emergencyFreeze,
+                expectedCodeHash,
+                expectedLineageHash
+            )
+        );
+
+        assembly {
+            wrapper := create2(
+                0,
+                add(bytecode, 0x20),
+                mload(bytecode),
+                salt
+            )
+            if iszero(wrapper) { revert(0, 0) }
+        }
+
+        emit WrappedSOSDeployed(wrapper, sosAddress, salt);
+    }
+
+    function computeAddress(
+        bytes32 salt,
+        address deployer,
+        string memory name,
+        string memory symbol,
+        address sosAddress,
+        bool emergencyFreeze,
+        bytes32 expectedCodeHash,
+        bytes32 expectedLineageHash
+    ) external pure returns (address predicted) {
+        bytes memory bytecode = abi.encodePacked(
+            type(VerifiedWrappedSOS).creationCode,
+            abi.encode(
+                name,
+                symbol,
+                sosAddress,
+                emergencyFreeze,
+                expectedCodeHash,
+                expectedLineageHash
+            )
+        );
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff),
+                deployer,
+                salt,
+                keccak256(bytecode)
+            )
+        );
+
+        predicted = address(uint160(uint256(hash)));
+    }
+}
+
+
+---
+
+✅ Next steps / suggestions:
+
+1. Write a Hardhat/Foundry deployment script that:
+
+Computes deterministic CREATE2 addresses
+
+Deploys multiple WrappedSOS for different SOS lineages
+
+
+
+2. Write unit tests for:
+
+Minting and bulkMint
+
+Transfer, approve, transferFrom
+
+Emergency freeze functionality
+
+Code hash / lineage hash verification
+
+
+
+3. Optional: Add EIP-165 / IMintable interface detection for tooling integration.
+
+
