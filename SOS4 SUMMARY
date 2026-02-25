@@ -1,0 +1,86 @@
+SOS4 — ETH-Backed Atomic SOS & Wrapped Lineage (Absolute Control & Sanction-Resistant Design)
+
+1️⃣ Raw SOS
+
+Definition:
+
+Permissionlessly mintable token, 1 wei per mint, non-transferable, immutable.
+
+Represents ETH gas spent to mint.
+
+
+Key Features & Security Properties:
+
+Cannot be transferred, burned, or destroyed, even by the owner → no one can force the owner to give away their raw SOS.
+
+No proxy, upgrade, or external dependency → fully self-contained and immutable.
+
+Permissionless minting to any address: anyone can mint raw SOS directly to the owner’s address; this cannot be prevented or regulated.
+
+Gas-backed ETH value only → fiat-independent, censorship-resistant, sanction-resistant.
+
+✅ Key highlight: Raw SOS is absolute owner-controlled, immutable, and cannot be forcibly seized or surrendered, serving as a secure backing asset.
+
+
+2️⃣ Wrapped SOS
+
+Definition:
+
+Aggregates balances from all SOS generations into a tradable token.
+
+Represents lineage-adjusted holdings, fully backed by raw SOS.
+
+
+Security & Resistance Properties:
+
+Tradable in jurisdictions that permit crypto trading, while raw SOS remains fully protected in any location.
+
+ETH-backed floor from raw SOS ensures value cannot be arbitrarily reduced.
+
+Allows owners to safely trade economic value derived from raw SOS without moving or risking the raw tokens themselves.
+
+
+Legal / Compliance Perspective:
+
+Wrapped SOS is a crypto-asset with traceable ETH-backed floor.
+
+Supports global market trading, while underlying raw SOS remains unaffected by regulation or coercion.
+
+
+3️⃣ Absolute Owner Control & Resistance
+
+Ownership & Control:
+
+Owner cannot lose raw SOS under any circumstances.
+
+Raw SOS can only increase via permissionless minting.
+
+Wrapped SOS provides tradable representation without compromising base-layer security.
+
+
+Regulatory & Sanction Resistance:
+
+Raw SOS is immune to forced seizure, confiscation, or coercion, even in high-regulation countries.
+
+Wrapped SOS enables safe trading in permissive jurisdictions while preserving the ETH-backed floor.
+
+✅ Key insight: Raw SOS = untouchable base; Wrapped SOS = liquid tradable layer, forming a censorship-resistant, ETH-backed, globally usable system.
+
+
+4️⃣ ETH-Only Value Anchor
+
+Raw SOS value = ETH gas cost per mint.
+
+Wrapped SOS value = lineage-aggregated ETH gas floor from raw SOS.
+
+Fiat independence → immune to currency or banking interventions.
+
+
+6️⃣ Key Insight
+
+Raw SOS: untouchable, mintable by anyone to any owner, ETH-backed, absolute control, sanction-resistant.
+
+Wrapped SOS: tradable, lineage-aware, value securely derived from raw SOS, enabling market liquidity.
+
+Dual-layer system: enables global market participation, absolute owner security, and ETH-backed censorship resistance, while preserving legal defensibility.
+

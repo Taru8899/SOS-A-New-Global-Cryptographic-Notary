@@ -1,0 +1,138 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+interface IERC165 {
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+}
+
+interface IMintable {
+    function mint(address recipient) external;
+}
+
+interface IERC20Minimal {
+    function balanceOf(address account) external view returns (uint256);
+    function totalSupply() external view returns (uint256);
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+    function decimals() external view returns (uint8);
+}
+
+interface ILineageBalance {
+    function lineageBalanceOf(address account) external view returns (uint256);
+}
+
+contract SOS is IERC165, IMintable, IERC20Minimal, ILineageBalance {
+
+    // ============ EVENTS ============
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Mint(address indexed minter, address indexed recipient, uint256 value);
+
+    // ============ TOKEN STORAGE ============
+    mapping(address => uint256) public balanceOf;
+    uint256 public totalSupply;
+
+    string public name;
+    string public symbol;
+    uint8 public constant decimals = 18;
+
+    // ============ LINEAGE METADATA ============
+    address public immutable controller;           // metadata only
+    address public immutable parentContract;
+    bytes32 public immutable parentCodeHash;
+    bytes32 public immutable lineageHash;
+    address public immutable previousController;  // metadata only
+    bool public immutable emergencyPatch;
+    bytes32 public immutable enforcedCodeHash;
+
+    uint256 public constant ATOMIC_MINT = 1;
+
+    // ============ INTERFACE IDS ============
+    bytes4 private constant INTERFACE_ID_MINTABLE = type(IMintable).interfaceId;
+    bytes4 private constant INTERFACE_ID_ERC20MIN = type(IERC20Minimal).interfaceId;
+    bytes4 private constant INTERFACE_ID_ERC165 = type(IERC165).interfaceId;
+    bytes4 private constant INTERFACE_ID_LINEAGE = type(ILineageBalance).interfaceId;
+
+    // ============ CONSTRUCTOR ============
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        address parentContract_,
+        address previousController_,
+        bool emergencyPatch_,
+        bytes32 enforcedCodeHash_
+    ) {
+        name = name_;
+        symbol = symbol_;
+        controller = msg.sender;
+        parentContract = parentContract_;
+        previousController = previousController_;
+        emergencyPatch = emergencyPatch_;
+        enforcedCodeHash = enforcedCodeHash_;
+
+        bytes32 parentLineageHash;
+
+        if (parentContract_ == address(0)) {
+            parentCodeHash = bytes32(0);
+            parentLineageHash = bytes32(0);
+        } else {
+            require(parentContract_.code.length > 0, "Parent not contract");
+            parentCodeHash = parentContract_.codehash;
+
+            if (!emergencyPatch_ && enforcedCodeHash_ != bytes32(0)) {
+                require(parentCodeHash == enforcedCodeHash_, "Parent code hash invalid");
+            }
+
+            try SOS(parentContract_).lineageHash() returns (bytes32 h) {
+                parentLineageHash = h;
+            } catch {
+                revert("Invalid parent SOS");
+            }
+        }
+
+        lineageHash = keccak256(
+            abi.encodePacked(parentLineageHash, address(this), block.chainid, emergencyPatch_)
+        );
+    }
+
+    // ============ MINT ============
+    function mint(address recipient) external override {
+        require(recipient != msg.sender, "Cannot mint for yourself");
+        require(recipient != address(0), "Zero address");
+
+        balanceOf[recipient] += ATOMIC_MINT;
+        totalSupply += ATOMIC_MINT;
+
+        emit Transfer(address(0), recipient, ATOMIC_MINT);
+        emit Mint(msg.sender, recipient, ATOMIC_MINT);
+    }
+
+    // ============ LINEAGE BALANCE ============
+    function lineageBalanceOf(address account) public view override returns (uint256 total) {
+        total = balanceOf[account];
+
+        if (parentContract != address(0)) {
+            try ILineageBalance(parentContract).lineageBalanceOf(account) returns (uint256 parentTotal) {
+                total += parentTotal;
+            } catch {
+                // ignore invalid parent
+            }
+        }
+    }
+
+    // ============ DISABLE TRANSFERS ============
+    function transfer(address, uint256) external pure returns (bool) { revert("Transfers disabled forever"); }
+    function approve(address, uint256) external pure returns (bool) { revert("Allowances disabled forever"); }
+    function transferFrom(address, address, uint256) external pure returns (bool) { revert("Transfers disabled forever"); }
+
+    // ============ REJECT ETH ============
+    receive() external payable { revert("Cannot receive ETH"); }
+    fallback() external payable { revert("Invalid call"); }
+
+    // ============ EIP-165 SUPPORT ============
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
+        return interfaceId == INTERFACE_ID_MINTABLE
+            || interfaceId == INTERFACE_ID_ERC20MIN
+            || interfaceId == INTERFACE_ID_LINEAGE
+            || interfaceId == INTERFACE_ID_ERC165;
+    }
+}

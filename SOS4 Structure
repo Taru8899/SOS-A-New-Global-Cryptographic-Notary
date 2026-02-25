@@ -1,0 +1,156 @@
+
+
+1️⃣ File Structure
+
+/SOS-Deterministic/
+├─ contracts/
+│  ├─ SOS.sol              // Ultra-minimal SOS contract with lineage + mint + EIP-165
+│  ├─ SOSFactory.sol       // CREATE2 deterministic deployment factory
+├─ scripts/
+│  ├─ deploy.js            // Deployment script (genesis & child SOS)
+│  ├─ computeAddress.js    // Precompute deterministic SOS addresses
+├─ test/
+│  ├─ SOS.test.js          // Unit tests for minting, lineage, events
+│  ├─ Factory.test.js      // Test deterministic deployment + lineageBalanceOf
+├─ package.json
+├─ hardhat.config.js
+
+
+---
+
+2️⃣ SOS.sol
+
+This is the contract we finalized:
+
+Mint-only 1 wei per call
+
+Recursive lineageBalanceOf
+
+EIP-165 / IMintable / minimal ERC20 support
+
+Metadata: parentContract, previousController, lineageHash
+
+Emergency patch + optional code hash enforcement
+
+
+(Use the full contract from previous message.)
+
+
+---
+
+3️⃣ SOSFactory.sol
+
+CREATE2 deterministic deployment
+
+Tracks parentContract, previousController
+
+Emits SOSDeployed event
+
+Compute address function
+
+
+(Use the factory from previous message.)
+
+
+---
+
+4️⃣ Deployment Script (scripts/deploy.js)
+
+Example using Hardhat:
+
+const { ethers } = require("hardhat");
+
+async function main() {
+  const [deployer] = await ethers.getSigners();
+
+  console.log("Deploying SOS contracts with account:", deployer.address);
+
+  const SOSFactory = await ethers.getContractFactory("SOSFactory");
+  const factory = await SOSFactory.deploy();
+  await factory.deployed();
+  console.log("Factory deployed at:", factory.address);
+
+  const salt = ethers.utils.formatBytes32String("genesis");
+
+  // Deploy Genesis SOS
+  const tx = await factory.deploySOS(
+    "SOS Genesis",
+    "SOSG",
+    ethers.constants.AddressZero, // no parent
+    ethers.constants.AddressZero, // previousController
+    false,                        // emergencyPatch
+    ethers.constants.HashZero,     // enforcedCodeHash
+    salt
+  );
+
+  console.log("Genesis SOS deployed, tx:", tx.hash);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+
+
+---
+
+5️⃣ Compute Deterministic Address (scripts/computeAddress.js)
+
+const { ethers } = require("hardhat");
+
+async function main() {
+  const [deployer] = await ethers.getSigners();
+  const SOSFactory = await ethers.getContractFactory("SOSFactory");
+  const factory = await SOSFactory.deploy();
+  await factory.deployed();
+
+  const bytecode = (await ethers.getContractFactory("SOS")).bytecode;
+  const salt = ethers.utils.formatBytes32String("genesis");
+
+  const address = await factory.computeAddress(salt, bytecode);
+  console.log("Deterministic Genesis SOS address:", address);
+}
+
+main();
+
+
+---
+
+6️⃣ Notes / Best Practices
+
+1. Lineage Aggregation:
+
+lineageBalanceOf(account) allows wrapped SOS contracts to sum balances recursively.
+
+
+
+2. Emergency Patches:
+
+Set emergencyPatch = true to bypass enforcedCodeHash.
+
+Can still maintain lineage verification externally.
+
+
+
+3. DEX / Swap / Burn Safety:
+
+transfer, transferFrom, approve, receive all revert.
+
+No selfdestruct or proxy patterns.
+
+
+
+4. Wrapped SOS:
+
+Any contract can call lineageBalanceOf across generations without additional storage.
+
+Works with explorers or analytics tools to show “total SOS holdings”.
+
+
+
+5. CREATE2 Determinism:
+
+Precompute addresses with a salt to plan child SOS deployments.
+
+Perfect for lineage explorers and automated wrapping.
+

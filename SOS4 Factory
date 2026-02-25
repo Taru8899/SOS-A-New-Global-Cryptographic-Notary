@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./SOS.sol";
+
+contract SOSFactory {
+
+    event SOSDeployed(
+        address indexed sosAddress,
+        address indexed parentContract,
+        address indexed deployer
+    );
+
+    /**
+     * @notice Deploy a new SOS contract deterministically
+     * @param name_ Name of the SOS token
+     * @param symbol_ Symbol of the SOS token
+     * @param parentContract_ Parent SOS contract address (or 0 for genesis)
+     * @param previousController_ Metadata only
+     * @param emergencyPatch_ Emergency patch flag
+     * @param enforcedCodeHash_ Optional enforced code hash of parent
+     * @param salt_ Unique salt for CREATE2
+     * @return sosAddress Deployed contract address
+     */
+    function deploySOS(
+        string memory name_,
+        string memory symbol_,
+        address parentContract_,
+        address previousController_,
+        bool emergencyPatch_,
+        bytes32 enforcedCodeHash_,
+        bytes32 salt_
+    ) external returns (address sosAddress) {
+        bytes memory bytecode = type(SOS).creationCode;
+        bytes memory initData = abi.encode(
+            name_,
+            symbol_,
+            parentContract_,
+            previousController_,
+            emergencyPatch_,
+            enforcedCodeHash_
+        );
+
+        // Append constructor arguments to bytecode
+        bytes memory fullBytecode = abi.encodePacked(bytecode, initData);
+
+        assembly {
+            sosAddress := create2(0, add(fullBytecode, 0x20), mload(fullBytecode), salt_)
+            if iszero(sosAddress) { revert(0, 0) }
+        }
+
+        emit SOSDeployed(sosAddress, parentContract_, msg.sender);
+    }
+
+    /**
+     * @notice Compute deterministic address of SOS contract
+     */
+    function computeAddress(bytes32 salt, bytes memory bytecode) external view returns (address) {
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff),
+                address(this),
+                salt,
+                keccak256(bytecode)
+            )
+        );
+        return address(uint160(uint256(hash)));
+    }
+}
