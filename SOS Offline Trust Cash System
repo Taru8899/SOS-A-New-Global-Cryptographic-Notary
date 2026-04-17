@@ -1,0 +1,235 @@
+SOS Offline Trust Cash System — Publish Summary
+
+
+
+Core Concept
+
+The SOS system is a decentralized, offline-capable trust economy, designed to function without banks, internet, or centralized authority. It operates as a cryptographic notary network, where value is not created as currency, but as verifiable obligations between humans.
+
+This model enables peer-to-peer exchange in disaster zones, restricted environments, or parallel economies, using identity, trust, and signed interactions instead of traditional money.
+
+
+
+1. Identity Layer — Persistent Human Continuity
+
+Each user controls a single seed phrase (root identity)
+
+From this seed, unlimited rotating accounts can be derived
+
+Accounts can be used once and abandoned without loss of continuity
+
+Key Principle:
+
+Identity persists through the seed
+
+Accounts are disposable interaction points
+
+This ensures:
+
+Privacy through rotation
+
+Recovery through seed
+
+No dependency on any single account
+
+
+2. Transaction Layer — Signed Offline Packets
+
+Transactions are not “payments” in the traditional sense.
+
+They are:
+
+> Signed obligations (cryptographic IOUs)
+
+Each interaction creates a packet:
+
+Sender identity (public key)
+
+Receiver identity
+
+Amount (SOS units)
+
+Timestamp
+
+Cryptographic signature
+
+These packets can be transferred via:
+
+Bluetooth
+
+Wi-Fi Direct
+
+QR codes
+
+Local mesh networks
+
+No internet is required.
+
+
+
+3. Value Model — Obligation, Not Currency
+
+SOS does not function as a traditional token.
+
+Instead:
+
+> Each “mint” represents a unit of obligation
+
+When a user “mints,” they are issuing a signed commitment
+
+The receiver holds proof of that commitment
+
+Value emerges from trust in the issuer
+
+Balance is not stored. It is reconstructed from:
+
+> Received obligations – Issued obligations
+
+
+
+4. Controlled Issuance (Anti-Abuse Logic)
+
+To prevent uncontrolled inflation and abuse:
+
+Minting is limited to:
+
+1 unit per transaction
+
+Maximum 86,400 units per day
+
+Trust requirement:
+
+Users must receive obligations from multiple independent identities
+
+Repeated self-referencing patterns reduce credibility
+
+Result:
+
+Issuance is naturally constrained by social validation
+
+Fraudulent actors are isolated through lack of trust
+
+
+
+5. Trust Layer — Local Reputation Graph
+
+Each node maintains a local trust graph:
+
+Tracks:
+
+Who issued obligations
+
+Who honored them
+
+Interaction frequency
+
+Accepts transactions based on:
+
+Direct trust
+
+Indirect trust (shared connections)
+
+> Trust is not global — it is local, emergent, and contextual
+
+
+
+6. Offline Operation — Mesh-Based Economy
+
+The system operates entirely offline through:
+
+Peer-to-peer communication
+
+Local data propagation
+
+Physical movement between trust zones
+
+Trust Spheres:
+
+Local clusters of users form trust networks
+
+Different spheres can interact when users physically move between them
+
+
+
+7. Ethereum Layer — Optional Anchor
+
+Ethereum acts as a non-essential anchoring layer:
+
+Periodically stores:
+
+Hashes of offline transaction history
+
+Proof of state at a given time
+
+Purpose:
+
+Dispute resolution
+
+Long-term integrity
+
+Cross-network verification
+
+Important:
+
+Core system does not depend on Ethereum to operate
+
+
+
+8. Security Model
+
+No central ledger → no single point of failure
+
+No accounts holding balance → reduced theft risk
+
+Compromised identity affects only future trust, not past records
+
+Seed phrase remains critical:
+
+It is the only root of identity continuity
+
+
+
+9. System Nature
+
+SOS is:
+
+Not a traditional cryptocurrency
+
+Not a fixed-supply token
+
+Not dependent on global consensus
+
+It is:
+
+> A distributed human trust protocol expressed through cryptographic evidence
+
+
+
+10. Use Cases
+
+Disaster zones (no infrastructure)
+
+Restricted or censored environments
+
+Off-grid communities
+
+Parallel informal economies
+
+
+
+
+Final Principle
+
+> SOS transforms “money” into verifiable human obligation.
+
+Value is no longer stored in accounts or banks, but in:
+
+Identity
+
+Interaction
+
+Trust
+
+And the system continues to function:
+
+> Even when the internet, institutions, and traditional currency systems fail.
