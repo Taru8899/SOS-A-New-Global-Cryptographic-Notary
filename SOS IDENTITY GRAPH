@@ -1,0 +1,339 @@
+SOS IDENTITY GRAPH SYSTEM
+
+Built on Ethereum
+
+Core principle:
+
+> Identity = participation graph, not ownership
+
+
+
+NEW CORE RULE
+
+First Identity Address = hash-based origin
+
+Each identity or cluster starts from a deterministic seed:
+
+bytes32 id = keccak256(abi.encodePacked(firstAddress));
+
+This creates:
+
+a root identity anchor
+
+a reproducible identity structure
+
+no external authority needed
+
+
+
+UNIVERSAL PARTICIPATION RULE
+
+ANY address can:
+
+✔ join any identity
+✔ join any cluster
+✔ vote on any proposal
+
+WITHOUT restriction
+
+This is now a fully open participation graph
+
+
+
+1. SMART CONTRACT SYSTEM
+
+🟣 Module A — Identity Core
+
+mapping(address => bytes32) public personOf;
+mapping(bytes32 => address[]) public personAddresses;
+
+mapping(address => bytes32) public clusterOf;
+mapping(bytes32 => address[]) public clusterMembers;
+
+
+
+🟢 Module B — Cluster System (recursive)
+
+mapping(bytes32 => string) public clusterName;
+mapping(bytes32 => bytes32[]) public clusterLinks;
+
+Clusters can:
+
+contain people
+
+contain clusters
+
+form infinite graph structures
+
+
+
+🔵 Module C — OPEN JOIN SYSTEM
+
+ANY address can join ANY identity or cluster
+
+function joinCluster(bytes32 id) external {
+    clusterOf[msg.sender] = id;
+    clusterMembers[id].push(msg.sender);
+}
+
+function joinPerson(bytes32 id) external {
+    personOf[msg.sender] = id;
+    personAddresses[id].push(msg.sender);
+}
+
+KEY CHANGE:
+
+No restrictions, no permissions, no gating.
+
+
+
+🟡 Module D — SOS FLOW TRACKING
+
+mapping(address => uint256) public minted;
+mapping(address => uint256) public received;
+
+Tracks:
+
+economic contribution
+
+flow history per address
+
+
+🔴 Module E — OPEN VOTING SYSTEM
+
+👉 ANY address can vote on ANY proposal
+
+mapping(bytes32 => mapping(address => bool)) public voted;
+mapping(bytes32 => uint256) public yes;
+mapping(bytes32 => uint256) public no;
+
+function vote(bytes32 proposal, bool support) external {
+    require(!voted[proposal][msg.sender]);
+
+    voted[proposal][msg.sender] = true;
+
+    if (support) yes[proposal]++;
+    else no[proposal]++;
+}
+
+
+
+⚫ Module F — TEMPORAL OVERRIDE ENGINE
+
+Latest consensus state wins:
+
+mapping(bytes32 => bytes32) public activeState;
+mapping(bytes32 => uint256) public timestamp;
+
+function updateState(bytes32 entity, bytes32 newState) external {
+    if (block.timestamp > timestamp[entity]) {
+        activeState[entity] = newState;
+        timestamp[entity] = block.timestamp;
+    }
+}
+
+
+
+2. GRAPH INDEXER
+
+Nodes:
+
+{
+  "type": "address | person | cluster",
+  "id": "0x...",
+  "nickname": "London"
+}
+
+Edges:
+
+{
+  "from": "nodeA",
+  "to": "nodeB",
+  "type": "join | vote | link"
+}
+
+
+
+Behavior update:
+
+any join event is valid
+
+any vote event is valid
+
+graph is fully permissionless
+
+
+
+3. LIVE GOVERNANCE MAP UI
+
+Now displays:
+
+open identity graph
+
+unrestricted participation flows
+
+live voting activity
+
+cluster expansion in real time
+
+
+
+4. OFFLINE SOS WAVE LAYER
+
+Behavior:
+
+no internet required
+
+peer-to-peer sync
+
+later merges with chain state
+
+
+SYSTEM MODEL
+
+🟣 1. Identity Layer
+
+hash-based origin identity
+
+self-declared grouping
+
+🔵 2. Address Layer
+
+fully open participation
+
+no restrictions
+
+🟢 3. Cluster Layer
+
+recursive group system
+
+clusters can contain clusters
+
+🟡 4. Governance Layer
+
+vote-by-join system
+
+any address can vote on anything
+
+⚫ 5. Temporal Layer
+
+latest state overrides previous state
+
+
+
+> A fully permissionless identity-governance graph where participation itself defines reality
+
+
+
+Core properties:
+
+✔ first identity = hash-based anchor
+✔ any address can join anything
+✔ any address can vote on anything
+✔ clusters are recursive
+✔ governance is continuous and override-based
+✔ system evolves as a living graph
+
+
+
+This system is:
+
+✔ Extremely flexible
+
+✔ Fully decentralized in behavior
+
+✔ Emergent and social
+
+But:
+
+❌ No enforcement layer
+
+❌ No identity verification
+
+❌ No protection against spam or manipulation
+
+So it functions as:
+
+> a social consensus simulation layer, not a controlled financial system
+
+
+
+VOTE IDENTITY SYSTEM
+
+🧩 Anyone can create a Vote Identity
+
+A Vote Identity is a temporary governance object (proposal / decision / action).
+
+NEW RULE:
+
+ANY address can create a vote identity and attach it to ANY identity or cluster.
+
+What this means
+
+A vote identity can represent:
+
+“John is President”
+
+“Fire John”
+
+“Join London cluster”
+
+“Merge Ukraine + EU cluster”
+
+“SOS emergency response”
+
+Vote Identity structure:
+
+Solidity
+
+mapping(bytes32 => bytes32) public voteTarget; // identity or cluster
+
+mapping(bytes32 => string) public voteMetadata;
+
+mapping(bytes32 => uint256) public voteTimestamp;
+
+Create vote identity
+
+Solidity
+
+function createVote(bytes32 voteId, bytes32 targetId, string memory metadata) external {
+
+    voteTarget[voteId] = targetId;
+
+    voteMetadata[voteId] = metadata;
+
+    voteTimestamp[voteId] = block.timestamp;
+
+}
+
+Vote participation (unchanged logic extended)
+
+
+
+Solidity
+
+mapping(bytes32 => mapping(address => bool)) public voted;
+
+mapping(bytes32 => uint256) public yes;
+
+mapping(bytes32 => uint256) public no;
+
+
+
+Solidity
+
+function vote(bytes32 voteId, bool support) external {
+
+    require(!voted[voteId][msg.sender]);
+
+
+
+    voted[voteId][msg.sender] = true;
+
+
+
+    if (support) yes[voteId]++;
+
+    else no[voteId]++;
+
+}
