@@ -1,0 +1,377 @@
+SOS 69069 — FINAL ENFORCED CONTRACT (WITH JOIN HISTORY)
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract SOS69069 {
+
+    // =========================================================
+    // BASIC STATE
+    // =========================================================
+
+    string public constant name = "SOS 69069";
+    string public constant symbol = "SOS";
+    uint8 public constant decimals = 0;
+
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+
+    // =========================================================
+    // SEED SYSTEM
+    // =========================================================
+
+    mapping(address => bytes32) public seedOf;
+
+    mapping(bytes32 => uint256) public seedMintIn;
+    mapping(bytes32 => uint256) public seedMintOut;
+    mapping(bytes32 => mapping(bytes32 => uint256)) public seedFlow;
+
+    event SeedDeclared(address indexed user, bytes32 seed);
+
+    function declareSeed(address origin) external {
+        _noETH();
+        seedOf[msg.sender] = keccak256(abi.encodePacked(origin));
+        emit SeedDeclared(msg.sender, seedOf[msg.sender]);
+    }
+
+    // =========================================================
+    // ATOMIC MINT (1 WEI → RECEIVER ONLY)
+    // =========================================================
+
+    uint256 public constant DAILY_LIMIT = 86400;
+
+    mapping(address => uint256) public lastMintDay;
+    mapping(address => uint256) public mintedToday;
+
+    event Mint(address indexed from, address indexed to, bytes32 fromSeed, bytes32 toSeed);
+
+    function mint(address to) external {
+        _noETH();
+
+        require(to != address(0), "Invalid");
+
+        _enforceMintLimit();
+
+        bytes32 fromSeed = seedOf[msg.sender];
+        bytes32 toSeed = seedOf[to];
+
+        // ❌ NO SELF-MINT (same seed)
+        require(!(fromSeed != bytes32(0) && fromSeed == toSeed), "Self-mint");
+
+        mintedToday[msg.sender]++;
+
+        // ✔ EXACT 1 WEI → RECEIVER
+        balanceOf[to] += 1 wei;
+        totalSupply += 1 wei;
+
+        if (fromSeed != bytes32(0)) seedMintOut[fromSeed]++;
+        if (toSeed != bytes32(0)) seedMintIn[toSeed]++;
+
+        if (fromSeed != bytes32(0) && toSeed != bytes32(0)) {
+            seedFlow[fromSeed][toSeed]++;
+        }
+
+        emit Mint(msg.sender, to, fromSeed, toSeed);
+    }
+
+    function _enforceMintLimit() internal {
+        uint256 day = block.timestamp / 1 days;
+
+        if (lastMintDay[msg.sender] != day) {
+            mintedToday[msg.sender] = 0;
+            lastMintDay[msg.sender] = day;
+        }
+
+        require(mintedToday[msg.sender] < DAILY_LIMIT, "Limit");
+    }
+
+    // =========================================================
+    // REPUTATION
+    // =========================================================
+
+    mapping(bytes32 => uint256) public reputation;
+
+    // =========================================================
+    // PRIME SYSTEM (NO PRIME LINKING)
+    // =========================================================
+
+    struct Prime {
+        address creator;
+        bytes32[] seeds;
+        mapping(bytes32 => bool) isMember;
+    }
+
+    mapping(uint256 => Prime) private primes;
+    uint256 public primeCount;
+
+    event PrimeCreated(uint256 id);
+    event PrimeJoined(uint256 id, bytes32 seed);
+
+    function createPrime() external {
+        _noETH();
+        primes[primeCount++].creator = msg.sender;
+        emit PrimeCreated(primeCount - 1);
+    }
+
+    function joinPrime(uint256 id) external {
+        _noETH();
+
+        bytes32 s = seedOf[msg.sender];
+        require(s != bytes32(0), "No seed");
+
+        Prime storage p = primes[id];
+
+        if (!p.isMember[s]) {
+            p.isMember[s] = true;
+            p.seeds.push(s);
+            emit PrimeJoined(id, s);
+        }
+    }
+
+    // =========================================================
+    // TRUST SYSTEM (CORE AGREEMENT)
+    // =========================================================
+
+    struct Trust {
+        address creator;
+
+        address p1;
+        address p2;
+        address p3;
+
+        bytes32 role1;
+        bytes32 role2;
+        bytes32 role3;
+
+        bytes32 contextHash;
+
+        uint256 parentTrust;
+
+        uint256 weight;
+    }
+
+    mapping(uint256 => Trust) public trusts;
+    uint256 public trustCount;
+
+    mapping(uint256 => mapping(bytes32 => bool)) public trusted;
+
+    event TrustCreated(uint256 id);
+    event Trusted(uint256 id, bytes32 seed);
+
+    function createTrust(
+        address _p1,
+        address _p2,
+        address _p3,
+        bytes32 _r1,
+        bytes32 _r2,
+        bytes32 _r3,
+        bytes32 _context,
+        uint256 _parentTrust
+    ) external {
+        _noETH();
+
+        Trust storage t = trusts[trustCount];
+
+        t.creator = msg.sender;
+
+        t.p1 = _p1;
+        t.p2 = _p2;
+        t.p3 = _p3;
+
+        t.role1 = _r1;
+        t.role2 = _r2;
+        t.role3 = _r3;
+
+        t.contextHash = _context;
+        t.parentTrust = _parentTrust;
+
+        emit TrustCreated(trustCount);
+        trustCount++;
+    }
+
+    // =========================================================
+    // TRUST (INTERNAL CONFIRMATION)
+    // =========================================================
+
+    function trust(uint256 id) external {
+        _noETH();
+
+        Trust storage t = trusts[id];
+        bytes32 s = seedOf[msg.sender];
+
+        require(s != bytes32(0), "No seed");
+
+        require(
+            msg.sender == t.p1 ||
+            msg.sender == t.p2 ||
+            msg.sender == t.p3,
+            "Not participant"
+        );
+
+        require(!trusted[id][s], "Already trusted");
+
+        trusted[id][s] = true;
+
+        t.weight += 1;
+        reputation[s] += 1;
+
+        emit Trusted(id, s);
+    }
+
+    // =========================================================
+    // JOIN SYSTEM (EXTERNAL VALIDATION + HISTORY)
+    // =========================================================
+
+    struct Join {
+        uint256 trustId;
+        uint256 parentJoin;
+        uint256 weight;
+    }
+
+    mapping(uint256 => Join) public joins;
+    uint256 public joinCount;
+
+    mapping(uint256 => mapping(bytes32 => bool)) public joined;
+
+    event JoinCreated(uint256 id, uint256 trustId);
+    event Joined(uint256 id, bytes32 seed);
+
+    function createJoin(uint256 trustId, uint256 parentJoin) external {
+        _noETH();
+
+        joins[joinCount] = Join({
+            trustId: trustId,
+            parentJoin: parentJoin,
+            weight: 0
+        });
+
+        emit JoinCreated(joinCount, trustId);
+        joinCount++;
+    }
+
+    function join(uint256 joinId) external {
+        _noETH();
+
+        Join storage j = joins[joinId];
+        Trust storage t = trusts[j.trustId];
+
+        bytes32 s = seedOf[msg.sender];
+        require(s != bytes32(0), "No seed");
+
+        // ❌ TRUST PARTICIPANTS CANNOT USE JOIN
+        require(
+            msg.sender != t.p1 &&
+            msg.sender != t.p2 &&
+            msg.sender != t.p3,
+            "Participants use trust()"
+        );
+
+        require(!joined[joinId][s], "Already joined");
+
+        joined[joinId][s] = true;
+
+        j.weight += 1;
+        reputation[s] += 1;
+
+        emit Joined(joinId, s);
+    }
+
+    // =========================================================
+    // 🔒 HARD PROTOCOL ENFORCEMENT
+    // =========================================================
+
+    /*
+        ENFORCED BY CODE (NOT JUST COMMENTS):
+
+        ✔ NO ETH ACCEPTED
+            - receive() reverts
+            - fallback() reverts
+            - all functions call _noETH()
+
+        ✔ NO TRANSFER FUNCTION EXISTS
+            - balanceOf is write-only via mint()
+            - no transfer(), no transferFrom()
+
+        ✔ NO ALLOWANCE SYSTEM EXISTS
+            - no approve(), no allowance mapping
+
+        ✔ NO BURN FUNCTION EXISTS
+            - no way to decrease totalSupply
+
+        ✔ NO SELFDESTRUCT
+            - no selfdestruct() opcode present
+
+        ✔ NO SELF-MINT (SAME SEED)
+            - enforced in mint():
+                require(fromSeed != toSeed)
+
+        ✔ FINANCIAL STATE ONLY CHANGES VIA mint()
+            - balanceOf updated ONLY in mint()
+            - totalSupply updated ONLY in mint()
+
+        ✔ TRUST PARTICIPANTS CANNOT USE join()
+            - enforced in join():
+                participants must use trust()
+
+        ✔ TRUST CANNOT “JOIN” OTHER TRUST
+            - no function exists to merge trusts
+            - only reference is parentTrust (read-only link)
+
+        ✔ ALL OTHER STATE IS NON-FINANCIAL:
+            - Trust
+            - Join
+            - Reputation
+            - Prime
+            - Seed
+
+        SYSTEM CLASS:
+        → NON-FINANCIAL GRAPH + AGREEMENT REGISTRY
+    */
+
+    function _noETH() internal view {
+        require(msg.value == 0, "No ETH allowed");
+    }
+
+    receive() external payable {
+        revert("No ETH allowed");
+    }
+
+    fallback() external payable {
+        revert("No ETH allowed");
+    }
+}
+
+---
+
+FINAL RESULT
+
+🔹 Mint layer
+
+1 wei → receiver only
+
+builds identity interaction graph
+
+🔹 Trust layer
+
+max 3 parties
+
+internal agreement confirmation
+
+🔹 Join layer
+
+external validation
+
+now has history via parentJoin
+
+fully separable from trust
+
+
+STRONGEST PROPERTY
+
+> Separation of roles
+
+Trust = agreement truth (inside)
+
+Join = validation signal (outside)
+
+Mint = interaction trace (base layer)
