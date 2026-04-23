@@ -1,0 +1,336 @@
+SOS 69069 — PROTOCOL DESCRIPTION
+
+SYSTEM CLASS
+
+Non-financial, event-driven, identity-linked communication protocol
+
+
+
+1. CORE PRINCIPLE
+
+SOS is not a token in the traditional sense.
+
+It is:
+
+> An on-chain message emission system with immutable identity anchors and public event logs
+
+The blockchain acts as:
+
+> A global, append-only communication layer (“public wall”)
+
+
+
+2. SEED (IDENTITY ROOT)
+
+Each address can declare itself as part of a Seed.
+
+Properties:
+
+A Seed is a cryptographic identity anchor
+
+A Seed is immutable once assigned
+
+An address:
+
+can join a Seed
+
+cannot change or overwrite its Seed
+
+No authority can assign members to a Seed
+
+Each address self-declares its Seed
+
+Meaning:
+
+> A Seed represents a persistent identity grouping across multiple addresses
+
+
+
+3. MINT (MESSAGE EMISSION LAYER)
+
+Mint is the only function that modifies on-chain state.
+
+Rules:
+
+1 transaction = 1 atomic mint
+
+1 mint = exactly 1 wei
+
+Mint increases receiver balance only
+
+Sender balance is not affected
+
+No self-mint allowed between addresses of the same Seed
+
+Daily limit:
+
+max 86400 mints per address
+
+3.1 Mint Interpretation
+
+Mint does NOT represent value transfer.
+
+Mint represents:
+
+> A message written to the receiver’s public on-chain wall
+
+Effects:
+
+balanceOf[address] increases
+
+This value represents:
+
+> total number of interactions/messages received
+
+3.2 Public Wall Communication Model
+
+All Mint events are publicly visible on-chain.
+
+However:
+
+> Only the intended receiver can reliably identify which messages are relevant to them
+
+This is achieved through:
+
+address-level filtering
+
+private key-based interpretation
+
+optional off-chain logic
+
+3.3 Message Linking via Mint
+
+Each Mint can be used as a reference anchor for off-chain communication.
+
+Meaning:
+
+> Any Mint you create can be linked to a message in an external application
+
+Example usage:
+
+A user sends a Mint to another address
+
+Off-chain, a message is created referencing that Mint
+
+The receiver detects:
+
+the Mint event
+
+the associated off-chain message
+
+Key Property:
+
+> Messages are publicly broadcast, but meaning is privately resolved
+
+
+
+4. TRUST SYSTEM (INTERNAL SIGNAL)
+
+Trust is an event-based message type.
+
+Properties:
+
+Created by any address with a Seed
+
+Can define up to 3 participants:
+
+p1, p2, p3
+
+Roles are free-format identifiers
+
+Includes:
+
+context reference (hash or external link)
+
+optional parentTrust (for history)
+
+Trust Function:
+
+Only assigned participants can emit a Trust signal.
+
+Rules:
+
+Each participant can act only once per Trust
+
+No on-chain storage of agreement data
+
+Only events are emitted
+
+Meaning:
+
+> Trust = message(type = trust)
+
+No enforced semantics beyond signaling.
+
+
+
+5. JOIN SYSTEM (EXTERNAL SIGNAL)
+
+Join is an event-based message type.
+
+Properties:
+
+Unlimited participants
+
+Can reference:
+
+a Trust
+
+a parent Join (history chain)
+
+Join Function:
+
+Any address with a Seed can emit a Join.
+
+Rules:
+
+One Join per Seed per event
+
+Trust participants cannot use Join for the same context
+
+Meaning:
+
+> Join = message(type = acknowledgment)
+
+
+
+6. EVENT-ONLY ARCHITECTURE
+
+The system does NOT store:
+
+Trust data
+
+Join data
+
+Relationships
+
+Agreement states
+
+Only emits events.
+
+Result:
+
+> Blockchain = immutable message log
+
+NOT a state machine of agreements
+
+
+
+7. RANK (OFF-CHAIN METRIC)
+
+Rank is not stored on-chain.
+
+It is computed from events:
+
+Formula:
+
+Rank(seed) =
+
+total Mint received by Seed
+minus
+
+total Mint sent by Seed
+
+Purpose:
+
+identity evaluation
+
+interaction density
+
+social signal
+
+
+
+8. HARD PROTOCOL CONSTRAINTS
+
+Enforced directly in code:
+
+No ETH accepted
+
+No transfers exist
+
+No allowance system
+
+No burn function
+
+No selfdestruct
+
+No DeFi interaction
+
+No escrow logic
+
+No value storage beyond message counters
+
+No self-mint between same Seed
+
+Critical Guarantee:
+
+> The only state-changing function is Mint
+
+All other functions:
+
+emit events only
+
+do not carry financial meaning
+
+
+
+9. SYSTEM NATURE
+
+SOS behaves as:
+
+a communication protocol
+
+an identity-linked event system
+
+an interaction graph builder
+
+It does NOT behave as:
+
+a financial instrument
+
+a payment system
+
+a store of value
+
+an exchange medium
+
+
+
+10. FINAL INTERPRETATION
+
+SOS is:
+
+> A public, append-only, identity-aware signaling layer
+
+where interactions are recorded on-chain
+and meaning is resolved off-chain
+
+STRONGEST PROPERTY
+
+> Public visibility + private interpretation
+
+All data is open
+Only intended participants can interpret relevance
+
+
+
+SUMMARY
+
+Mint = message emission
+
+Trust = structured signal (internal)
+
+Join = acknowledgment signal (external)
+
+Seed = immutable identity anchor
+
+Balance = message count
+
+Rank = derived metric
+
+FINAL STATEMENT
+
+SOS is:
+
+> A neutral, non-financial protocol for recording and linking human or system interactions through immutable on-chain events.
