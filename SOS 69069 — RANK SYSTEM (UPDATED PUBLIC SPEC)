@@ -1,0 +1,365 @@
+SOS 69069 — RANK SYSTEM (UPDATED PUBLIC SPEC)
+
+---
+
+1. SYSTEM OVERVIEW
+
+The SOS Rank system is a non-financial behavioral measurement layer derived from on-chain events.
+
+It does not represent value, ownership, or rights.
+
+It represents:
+
+> a real-time balance of communication activity inside a public event graph.
+
+
+
+
+---
+
+2. CORE METRICS (ALWAYS DISPLAYED)
+
+For every Seed (S), the system exposes three primary metrics:
+
+MintIn(S)
+
+MintOut(S)
+
+Rank(S)
+
+
+---
+
+2.1 Definitions
+
+MintIn
+
+Total number of Mint events received by addresses belonging to a seed.
+
+MintOut
+
+Total number of Mint events sent by addresses belonging to a seed.
+
+Rank
+
+Computed interaction score:
+
+Rank is not a token, reward, or currency.
+
+---
+
+3. RANK FORMULA
+
+Rank is computed as:
+
+Rank(S) = (MintIn(S) - MintOut(S))
++ α · log(1 + TrustScore(S))
++ β · log(1 + JoinScore(S))
+
+Where:
+
+α = trust influence factor
+
+β = join influence factor
+
+log = diminishing returns function
+
+
+---
+
+4. SOCIAL SIGNAL LAYERS
+
+4.1 TrustScore
+
+Represents structured 3-party interactions (Trust events).
+
+Properties:
+
+Non-financial
+
+Event-only
+
+Diminishing returns via logarithmic scaling
+
+
+---
+
+4.2 JoinScore
+
+Represents open acknowledgment participation (Join events).
+
+Properties:
+
+Unlimited participation
+
+Low individual weight
+
+Strong diminishing returns at scale
+
+
+---
+
+5. DESIGN PRINCIPLES
+
+The system is built on three constraints:
+
+No financial value representation
+
+No transfer of assets or rights
+
+No reward or incentive mechanism
+
+Rank is purely observational.
+
+---
+
+6. BOT RESISTANCE MODEL (MATHEMATICAL BEHAVIOR)
+
+
+
+---
+
+6.1 Attack Model A — Mint Spam Bots
+
+Strategy:
+
+Bots generate large numbers of outgoing Mint events.
+
+Effect:
+
+MintOut increases rapidly while MintIn remains low.
+
+Result:
+
+Rank decreases:
+
+Rank ≈ MintIn - MintOut
+
+> Spam reduces its own visibility.
+
+
+
+
+---
+
+6.2 Attack Model B — Sybil Identity Networks
+
+Strategy:
+
+Bots create many addresses and circulate Mints internally.
+
+Effect:
+
+Internal transfers produce:
+
+MintIn ≈ MintOut
+
+Result:
+
+Net Rank ≈ 0
+
+> Closed-loop activity cancels itself mathematically.
+
+
+
+
+---
+
+6.3 Attack Model C — Trust Farming
+
+Strategy:
+
+Repeated Trust events between coordinated accounts.
+
+Effect:
+
+TrustScore increases.
+
+Limitation:
+
+Growth is logarithmically damped:
+
+log(1 + TrustScore)
+
+Result:
+
+After initial gains, influence quickly saturates.
+
+---
+
+6.4 Attack Model D — Join Farming
+
+Strategy:
+
+Mass Join event generation.
+
+Effect:
+
+JoinScore increases linearly.
+
+Limitation:
+
+Rank uses logarithmic scaling:
+
+log(1 + JoinScore)
+
+Result:
+
+Large-scale farming produces minimal additional impact.
+
+---
+
+6.5 Attack Model E — Combined Bot Strategy
+
+Strategy:
+
+Bots combine:
+
+Mint spam
+
+Trust spam
+
+Join spam
+
+Sybil clusters
+
+System response:
+
+1. Mint imbalance dominates (MintOut growth)
+
+
+
+2. Social signals saturate (log scaling)
+
+
+
+3. Internal cycles cancel out (net zero flow)
+
+
+
+
+Result:
+
+Bot clusters converge toward low or neutral Rank values.
+
+---
+
+7. WHY THE SYSTEM RESISTS MANIPULATION
+
+The robustness comes from three mathematical properties:
+
+---
+
+7.1 Flow conservation
+
+In closed systems:
+
+MintIn ≈ MintOut
+
+This prevents artificial inflation of Rank.
+
+---
+
+7.2 Sublinear scaling
+
+All social signals use logarithmic growth:
+
+log(x)
+
+Meaning:
+
+10 events ≠ 10x influence
+
+10,000 events ≠ proportional gain
+
+
+---
+
+7.3 No reward feedback loop
+
+There is:
+
+no token value
+
+no staking reward
+
+no financial incentive
+
+no governance power tied to Rank
+
+> This removes economic motivation for manipulation.
+
+
+
+
+---
+
+8. FINAL SYSTEM BEHAVIOR
+
+
+
+---
+
+Human behavior produces:
+
+diverse Mint patterns
+
+irregular Trust participation
+
+distributed Join activity
+
+→ stable, meaningful Rank signals
+
+---
+
+Bot behavior produces:
+
+repetitive patterns
+
+closed loops
+
+high-frequency symmetry
+
+→ neutralized or negative Rank outcomes
+
+---
+
+9. CORE INTERPRETATION
+
+Rank is not a score of value or authority.
+
+It is:
+
+> a measurement of interaction entropy within a public communication graph.
+
+
+
+
+---
+
+10. FINAL SUMMARY
+
+MintIn and MintOut define base interaction flow
+
+Trust and Join add damped social signals
+
+Logarithmic scaling prevents farming
+
+Closed-loop behavior cancels itself
+
+No financial incentives exist in the system
+
+
+---
+
+🔥 CORE CONCLUSION
+
+The SOS Rank system is designed so that:
+
+> increasing activity does not guarantee increasing influence.
+
+
+
+Only structurally diverse interaction patterns produce meaningful signal.
+
+---
