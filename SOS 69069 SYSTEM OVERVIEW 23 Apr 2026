@@ -1,0 +1,533 @@
+SOS 69069 SYSTEM OVERVIEW
+
+This contract is a:
+
+Non-financial, event-driven identity + agreement graph
+
+It has 3 core layers:
+
+Mint → interaction trace
+
+Trust → structured agreement
+
+Join → external validation
+
+Everything else supports these.
+
+---
+
+🔹 1. BASIC TOKEN STATE
+
+name, symbol, decimals
+
+Static metadata
+
+Not used for trading (no transfers exist)
+
+
+---
+
+totalSupply
+
+Increases ONLY when mint happens
+
+Each mint = +1 wei
+
+
+---
+
+balanceOf[address]
+
+Tracks how much an address has received
+
+Important:
+
+Sender NEVER receives balance
+
+Only receiver gets +1 wei
+
+
+
+---
+
+🔹 2. SEED SYSTEM (IDENTITY LAYER)
+
+mapping(address => bytes32) seedOf
+
+Links each address → a seed (identity)
+
+Multiple addresses can share same seed
+
+
+---
+
+declareSeed(address origin)
+
+👉 Action:
+
+User assigns themselves to a seed
+
+👉 How it works:
+
+Seed = keccak256(origin)
+
+No permission required
+
+Any address can join any seed
+
+👉 Effect:
+
+Identity is created or joined
+
+
+---
+
+seedName[seed]
+
+nameSeed(bytes32 name)
+
+👉 Action:
+
+Assign a name to a seed
+
+👉 Rules:
+
+Only an address WITH that seed can name it
+
+👉 Effect:
+
+Lightweight labeling (for UI / graph tools)
+
+
+---
+
+🔹 3. RANK SYSTEM (CORE METRIC)
+
+mapping(bytes32 => int256) rank
+
+👉 This replaces traditional balances at seed level
+
+---
+
+How rank changes:
+
+In mint():
+
+Sender seed → -1
+Receiver seed → +1
+
+---
+
+Meaning:
+
+Positive rank → receives more than sends
+
+Negative rank → sends more than receives
+
+
+---
+
+Use:
+
+Reputation scoring
+
+Weight metric (off-chain)
+
+Trust evaluation
+
+
+---
+
+🔹 4. ATOMIC MINT SYSTEM
+
+mint(address to)
+
+👉 MOST IMPORTANT FUNCTION
+
+---
+
+What it does:
+
+1. Checks:
+
+no ETH sent
+
+valid address
+
+daily mint limit
+
+
+2. Prevents:
+
+❌ self-mint (same seed → same seed)
+
+
+3. Updates:
+
+receiver balance += 1 wei
+
+totalSupply += 1 wei
+
+
+4. Updates rank:
+
+sender seed → -1
+
+receiver seed → +1
+
+
+5. Emits:
+
+
+
+
+Mint(from, to, fromSeed, toSeed)
+
+---
+
+Key rules:
+
+1 transaction = 1 mint
+
+1 mint = exactly 1 wei
+
+Sender gets NOTHING
+
+Receiver gets EVERYTHING
+
+
+---
+
+Daily limit:
+
+86400 mints per address per day
+
+---
+
+_enforceMintLimit()
+
+👉 Resets daily counter
+👉 Ensures limit is not exceeded
+
+---
+
+🔹 5. TRUST SYSTEM (STRUCTURED AGREEMENT)
+
+createTrust(...)
+
+createTrust(
+    targetAddress,
+    name,
+    contextHash,
+    parentTrust,
+    p1, p2, p3
+)
+
+---
+
+What it does:
+
+👉 Emits an agreement event
+
+TrustCreated(...)
+
+---
+
+Parameters:
+
+targetAddress → the subject of the trust
+
+name → short label (bytes32)
+
+contextHash → proof reference (invoice / contract / deal)
+
+parentTrust → link to previous agreement
+
+p1, p2, p3 → participants (max 3)
+
+
+---
+
+Important:
+
+❌ NOT stored on-chain
+
+✔ ONLY emitted as event
+
+
+---
+
+Meaning:
+
+"I declare a structured agreement involving these participants"
+
+---
+
+🔹 6. JOIN SYSTEM (EXTERNAL VALIDATION)
+
+createJoin(...)
+
+createJoin(
+    targetAddress,
+    name,
+    contextHash,
+    parentJoin
+)
+
+---
+
+What it does:
+
+👉 Emits validation event:
+
+JoinCreated(...)
+
+---
+
+Parameters:
+
+targetAddress → what is being validated
+
+name → label
+
+contextHash → proof
+
+parentJoin → history chain
+
+
+---
+
+Meaning:
+
+"I externally confirm / validate something about this target"
+
+---
+
+Difference from Trust:
+
+Trust Join
+
+structured open
+max 3 participants unlimited
+internal agreement external validation
+
+
+---
+
+🔹 7. EVENT-ONLY GRAPH DESIGN
+
+Critical design decision:
+
+❌ No Trust stored
+
+❌ No Join stored
+
+✔ Only events
+
+
+---
+
+Result:
+
+Blockchain stores:
+
+History, not state
+
+---
+
+Why this matters:
+
+Very low gas cost
+
+Infinite scalability
+
+No state corruption risk
+
+Full reconstructable graph off-chain
+
+
+---
+
+🔹 8. PARENT LINKING SYSTEM
+
+parentTrust
+
+parentJoin
+
+---
+
+Purpose:
+
+Build chains:
+
+Trust → Trust → Trust
+Join → Join → Join
+
+---
+
+Used for:
+
+dispute history
+
+agreement evolution
+
+long-term traceability
+
+
+---
+
+🔹 9. ACCESS CONTROL MODEL
+
+Who can call Trust / Join?
+
+✔ ONLY addresses with a seed:
+
+require(seedOf[msg.sender] != 0)
+
+---
+
+No roles enforced on-chain
+
+👉 All interpretation is:
+
+OFF-CHAIN
+
+---
+
+🔹 10. HARD PROTOCOL ENFORCEMENT
+
+Enforced in code:
+
+✔ No ETH:
+
+receive() → revert
+
+fallback() → revert
+
+_noETH() in all functions
+
+
+---
+
+✔ No transfer:
+
+No transfer function exists
+
+
+---
+
+✔ No allowance:
+
+No approve / allowance mapping
+
+
+---
+
+✔ No burn:
+
+totalSupply NEVER decreases
+
+
+---
+
+✔ No selfdestruct:
+
+Not implemented
+
+
+---
+
+✔ No self-mint:
+
+require(fromSeed != toSeed)
+
+---
+
+✔ Financial state only via mint:
+
+Only mint updates balances
+
+
+---
+
+✔ Trust/Join:
+
+Events only
+
+No manipulation possible
+
+
+---
+
+🔥 FINAL SYSTEM BEHAVIOR
+
+What users actually do:
+
+---
+
+1. Identity
+
+declareSeed()
+
+---
+
+2. Interaction
+
+mint()
+
+→ builds economic trace
+
+---
+
+3. Agreement
+
+createTrust()
+
+---
+
+4. Validation
+
+createJoin()
+
+---
+
+5. Linking
+
+parentTrust / parentJoin
+
+---
+
+⚖️ FINAL INTERPRETATION
+
+This system is:
+
+NOT:
+
+token
+
+payment system
+
+escrow
+
+DeFi
+
+
+---
+
+IS:
+
+A deterministic, minimal-state,
+event-driven identity + agreement graph
+anchored by atomic interactions (mint)
+
+---
+
+🧠 MOST IMPORTANT INSIGHT
+
+You separated:
+
+VALUE → removed
+STATE → minimized
+SIGNAL → maximized
+
+---
