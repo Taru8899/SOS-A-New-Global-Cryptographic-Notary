@@ -1,0 +1,228 @@
+SOS 69069 — FINAL EVENT-ONLY PROTOCOL CONTRACT
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract SOS69069 {
+
+    // =========================================================
+    // BASIC STATE
+    // =========================================================
+
+    string public name = "SOS 69069";
+    string public symbol = "SOS";
+    uint8 public decimals = 0;
+
+    uint256 public totalSupply;
+
+    // message counter (NOT value)
+    mapping(address => uint256) public balanceOf;
+
+    // =========================================================
+    // SEED SYSTEM (IMMUTABLE AFTER SET)
+    // =========================================================
+
+    mapping(address => bytes32) public seedOf;
+
+    event SeedDeclared(address indexed user, bytes32 seed);
+
+    function declareSeed(address origin) external {
+        _noETH();
+
+        require(seedOf[msg.sender] == bytes32(0), "Seed already set");
+
+        seedOf[msg.sender] = keccak256(abi.encodePacked(origin));
+
+        emit SeedDeclared(msg.sender, seedOf[msg.sender]);
+    }
+
+    // =========================================================
+    // MINT = MESSAGE LAYER (1 WEI MESSAGE)
+    // =========================================================
+
+    uint256 public constant DAILY_LIMIT = 86400;
+
+    mapping(address => uint256) public lastMintDay;
+    mapping(address => uint256) public mintedToday;
+
+    event Mint(
+        address indexed from,
+        address indexed to,
+        bytes32 fromSeed,
+        bytes32 toSeed
+    );
+
+    function mint(address to) external {
+        _noETH();
+
+        require(to != address(0), "Invalid address");
+
+        _enforceMintLimit();
+
+        bytes32 fromSeed = seedOf[msg.sender];
+        bytes32 toSeed = seedOf[to];
+
+        // NO SELF-MINT ACROSS SAME SEED
+        require(
+            !(fromSeed != bytes32(0) && fromSeed == toSeed),
+            "Self-seed mint blocked"
+        );
+
+        mintedToday[msg.sender]++;
+
+        // message delivery (1 wei = 1 message unit)
+        balanceOf[to] += 1;
+        totalSupply += 1;
+
+        emit Mint(msg.sender, to, fromSeed, toSeed);
+    }
+
+    function _enforceMintLimit() internal {
+        uint256 day = block.timestamp / 1 days;
+
+        if (lastMintDay[msg.sender] != day) {
+            mintedToday[msg.sender] = 0;
+            lastMintDay[msg.sender] = day;
+        }
+
+        require(mintedToday[msg.sender] < DAILY_LIMIT, "Daily limit reached");
+    }
+
+    // =========================================================
+    // TRUST SYSTEM (EVENT ONLY, MAX 3 PARTICIPANTS)
+    // =========================================================
+
+    event TrustCreated(
+        uint256 indexed trustId,
+        address indexed p1,
+        address indexed p2,
+        address indexed p3,
+        bytes32 role1,
+        bytes32 role2,
+        bytes32 role3,
+        bytes32 contextHash,
+        uint256 parentTrust
+    );
+
+    function trust(
+        address p1,
+        address p2,
+        address p3,
+        bytes32 role1,
+        bytes32 role2,
+        bytes32 role3,
+        bytes32 contextHash,
+        uint256 parentTrust
+    ) external {
+        _noETH();
+
+        require(
+            msg.sender == p1 ||
+            msg.sender == p2 ||
+            msg.sender == p3,
+            "Not participant"
+        );
+
+        emit TrustCreated(
+            uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender))),
+            p1,
+            p2,
+            p3,
+            role1,
+            role2,
+            role3,
+            contextHash,
+            parentTrust
+        );
+    }
+
+    // =========================================================
+    // JOIN SYSTEM (EVENT ONLY, UNLIMITED PARTICIPANTS)
+    // =========================================================
+
+    event JoinCreated(
+        uint256 indexed joinId,
+        address indexed participant,
+        uint256 parentJoin
+    );
+
+    function join(uint256 parentJoin) external {
+        _noETH();
+
+        bytes32 seed = seedOf[msg.sender];
+        require(seed != bytes32(0), "No seed");
+
+        emit JoinCreated(
+            uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender))),
+            msg.sender,
+            parentJoin
+        );
+    }
+
+    // =========================================================
+    // HARD PROTOCOL ENFORCEMENT
+    // =========================================================
+
+    function _noETH() internal view {
+        require(msg.value == 0, "No ETH allowed");
+    }
+
+    receive() external payable {
+        revert("No ETH allowed");
+    }
+
+    fallback() external payable {
+        revert("No ETH allowed");
+    }
+}
+
+
+---
+
+WHAT THIS CONTRACT NOW IS
+
+✔ It is:
+
+a public message wall protocol
+
+an identity-linked event stream
+
+a seed-based grouping system
+
+a trust/join signal emitter
+
+a mint-based interaction counter system
+
+
+
+---
+
+❌ It is NOT:
+
+token economy
+
+financial asset
+
+transferable balance system
+
+DeFi system
+
+escrow system
+
+
+
+---
+
+CORE BEHAVIOR SUMMARY
+
+Mint = public message to receiver
+
+balanceOf = number of received messages
+
+Trust = structured 3-party signal event
+
+Join = open acknowledgment event
+
+Seed = immutable identity anchor
+
+Rank = off-chain computed metric
