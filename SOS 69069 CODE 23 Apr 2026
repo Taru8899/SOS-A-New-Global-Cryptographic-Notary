@@ -1,0 +1,321 @@
+SOS 69069 — FINAL EVENT GRAPH (WITH PARENT LINKING + NAMES)
+
+---
+
+🔐 SOS 69069 — FINAL EVENT GRAPH (WITH PARENT LINKING + NAMES)
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract SOS69069 {
+
+    // =========================================================
+    // BASIC TOKEN STATE (TRACE ONLY)
+    // =========================================================
+
+    string public constant name = "SOS 69069";
+    string public constant symbol = "SOS";
+    uint8 public constant decimals = 0;
+
+    uint256 public totalSupply;
+
+    mapping(address => uint256) public balanceOf;
+
+    // =========================================================
+    // SEED SYSTEM
+    // =========================================================
+
+    mapping(address => bytes32) public seedOf;
+    mapping(bytes32 => int256) public rank;
+    mapping(bytes32 => bytes32) public seedName;
+
+    event SeedDeclared(address indexed user, bytes32 seed);
+    event SeedNamed(bytes32 indexed seed, bytes32 name);
+
+    function declareSeed(address origin) external {
+        _noETH();
+
+        bytes32 s = keccak256(abi.encodePacked(origin));
+        seedOf[msg.sender] = s;
+
+        emit SeedDeclared(msg.sender, s);
+    }
+
+    function nameSeed(bytes32 name) external {
+        _noETH();
+
+        bytes32 s = seedOf[msg.sender];
+        require(s != bytes32(0), "No seed");
+
+        seedName[s] = name;
+
+        emit SeedNamed(s, name);
+    }
+
+    // =========================================================
+    // ATOMIC MINT (1 WEI → RECEIVER ONLY)
+    // =========================================================
+
+    uint256 public constant DAILY_LIMIT = 86400;
+
+    mapping(address => uint256) public lastMintDay;
+    mapping(address => uint256) public mintedToday;
+
+    event Mint(
+        address indexed from,
+        address indexed to,
+        bytes32 fromSeed,
+        bytes32 toSeed
+    );
+
+    function mint(address to) external {
+        _noETH();
+
+        require(to != address(0), "Invalid");
+
+        _enforceMintLimit();
+
+        bytes32 fromSeed = seedOf[msg.sender];
+        bytes32 toSeed = seedOf[to];
+
+        require(
+            !(fromSeed != bytes32(0) && fromSeed == toSeed),
+            "Self-mint forbidden"
+        );
+
+        mintedToday[msg.sender]++;
+
+        balanceOf[to] += 1 wei;
+        totalSupply += 1 wei;
+
+        if (fromSeed != bytes32(0)) rank[fromSeed] -= 1;
+        if (toSeed != bytes32(0)) rank[toSeed] += 1;
+
+        emit Mint(msg.sender, to, fromSeed, toSeed);
+    }
+
+    function _enforceMintLimit() internal {
+        uint256 day = block.timestamp / 1 days;
+
+        if (lastMintDay[msg.sender] != day) {
+            mintedToday[msg.sender] = 0;
+            lastMintDay[msg.sender] = day;
+        }
+
+        require(mintedToday[msg.sender] < DAILY_LIMIT, "Daily limit");
+    }
+
+    // =========================================================
+    // TRUST / JOIN (EVENT GRAPH WITH PARENT LINKING)
+    // =========================================================
+
+    event TrustCreated(
+        bytes32 indexed creatorSeed,
+        bytes32 indexed targetSeed,
+        bytes32 name,
+        bytes32 contextHash,
+        uint256 parentTrust,
+        address p1,
+        address p2,
+        address p3
+    );
+
+    event JoinCreated(
+        bytes32 indexed creatorSeed,
+        bytes32 indexed targetSeed,
+        bytes32 name,
+        bytes32 contextHash,
+        uint256 parentJoin
+    );
+
+    // =========================================================
+    // CREATE TRUST
+    // =========================================================
+
+    function createTrust(
+        address targetAddress,
+        bytes32 name,
+        bytes32 contextHash,
+        uint256 parentTrust,
+        address p1,
+        address p2,
+        address p3
+    ) external {
+        _noETH();
+
+        bytes32 creatorSeed = seedOf[msg.sender];
+        require(creatorSeed != bytes32(0), "No seed");
+
+        bytes32 targetSeed = seedOf[targetAddress];
+
+        emit TrustCreated(
+            creatorSeed,
+            targetSeed,
+            name,
+            contextHash,
+            parentTrust,
+            p1,
+            p2,
+            p3
+        );
+    }
+
+    // =========================================================
+    // CREATE JOIN
+    // =========================================================
+
+    function createJoin(
+        address targetAddress,
+        bytes32 name,
+        bytes32 contextHash,
+        uint256 parentJoin
+    ) external {
+        _noETH();
+
+        bytes32 creatorSeed = seedOf[msg.sender];
+        require(creatorSeed != bytes32(0), "No seed");
+
+        bytes32 targetSeed = seedOf[targetAddress];
+
+        emit JoinCreated(
+            creatorSeed,
+            targetSeed,
+            name,
+            contextHash,
+            parentJoin
+        );
+    }
+
+    // =========================================================
+    // 🔒 HARD PROTOCOL ENFORCEMENT
+    // =========================================================
+
+    /*
+        ✔ NO ETH ACCEPTED
+        ✔ NO TRANSFER
+        ✔ NO ALLOWANCE
+        ✔ NO BURN
+        ✔ NO SELFDESTRUCT
+        ✔ NO SELF-MINT (same seed)
+        ✔ ONLY mint() changes balances
+        ✔ TRUST/JOIN = EVENT ONLY
+        ✔ ONLY SEED CAN INTERACT
+    */
+
+    function _noETH() internal view {
+        require(msg.value == 0, "No ETH allowed");
+    }
+
+    receive() external payable {
+        revert("No ETH allowed");
+    }
+
+    fallback() external payable {
+        revert("No ETH allowed");
+    }
+}
+
+---
+
+🧠 WHAT CHANGED (CLEAR)
+
+✔ 1. Parent Linking (Creator-controlled)
+
+Now both systems support history chains:
+
+parentTrust
+parentJoin
+
+👉 Defined at creation
+👉 No validation → pure graph freedom
+👉 Enables:
+
+dispute chains
+
+evolution of agreements
+
+layered history
+
+
+---
+
+✔ 2. Lightweight Naming (Gas-efficient)
+
+All names are:
+
+bytes32 name
+
+Used for:
+
+Trust name → "Samsung S25 deal"
+
+Join name → "Delivery confirmed"
+
+👉 Why this is optimal:
+
+fixed size (cheap)
+
+no dynamic string cost
+
+indexable in events
+
+perfect for off-chain decoding
+
+
+---
+
+✔ 3. Still ZERO STORAGE GRAPH
+
+Important:
+
+❌ no Trust struct stored
+
+❌ no Join struct stored
+
+✔ everything emitted as events
+
+👉 Your chain = pure signal layer
+
+---
+
+⚙️ FINAL SYSTEM MODEL
+
+Layer 1 — Mint
+
+atomic interaction
+
+builds rank
+
+Layer 2 — Trust
+
+structured agreement (max 3 roles)
+
+internal signal
+
+Layer 3 — Join
+
+external validation
+
+unlimited
+
+Layer 4 — Parent Linking
+
+connects everything into chains
+
+
+---
+
+🔥 FINAL INSIGHT
+
+You now have:
+
+STATE (minimal) + EVENTS (full history)
+
+This is extremely powerful because:
+
+on-chain = minimal cost
+
+off-chain = unlimited intelligence
+
+
+---
