@@ -1,0 +1,477 @@
+SOS MULTI-CHAIN MESSAGING PROTOCOL
+
+Final Architecture — 3 Channel System
+
+
+---
+
+SYSTEM OVERVIEW
+
+SOS is a multi-chain, event-driven communication protocol.
+
+It is designed as a neutral infrastructure where messages are recorded on blockchain networks and interpreted off-chain.
+
+The system operates across three independent environments:
+
+Ethereum (L1)
+
+Ethereum Layer 2 networks
+
+Solana
+
+
+Each network represents a separate communication channel with its own cost structure and usage context.
+
+
+---
+
+CORE PRINCIPLE
+
+SOS is not a traditional messaging app and not a financial token.
+
+It is:
+
+A public, append-only communication layer
+where interactions are emitted as events
+and meaning is resolved by users or applications
+
+
+---
+
+THREE CHANNEL MODEL
+
+The system is intentionally divided into three independent channels.
+
+There is:
+
+no merging
+
+no ranking
+
+no weighting
+
+
+Each channel exists as a separate communication lane.
+
+
+---
+
+Ethereum — Premium Channel
+
+High cost per interaction.
+
+Used for:
+
+critical communication
+
+high-value interactions
+
+strong commitment signaling
+
+
+This channel naturally filters noise due to economic cost.
+
+
+---
+
+L2 — Business Channel
+
+Low cost and scalable.
+
+Used for:
+
+work communication
+
+operational messaging
+
+structured interactions
+
+
+This channel balances efficiency and signal quality.
+
+
+---
+
+Solana — Personal / Mass Channel
+
+Near-zero cost.
+
+Used for:
+
+family communication
+
+social messaging
+
+high-frequency interactions
+
+
+This channel enables open access and mass usage.
+
+
+---
+
+CONTEXT SEPARATION
+
+The system allows natural separation of life contexts:
+
+Personal communication → Solana
+
+Professional communication → L2
+
+High-value communication → Ethereum
+
+
+This removes the need for artificial filtering inside a single system.
+
+
+---
+
+USER IDENTITY MODEL
+
+Identity is user-controlled.
+
+
+---
+
+Unified Identity (Unified Seed)
+
+User links all wallets into one identity across chains.
+
+Result:
+
+consistent identity
+
+shared history
+
+cross-channel visibility
+
+
+
+---
+
+Separate Identities (Separate Seeds)
+
+User maintains different identities per chain.
+
+Result:
+
+separation of personas
+
+no automatic linkage
+
+context isolation
+
+
+
+---
+
+MESSAGE MODEL
+
+The protocol uses simple, abstract message types.
+
+No meaning is enforced on-chain.
+
+
+---
+
+Mint
+
+1 mint = 1 message
+
+increases receiver’s interaction count
+
+acts as a message on the receiver’s public wall
+
+
+
+---
+
+Trust
+
+message type: trust
+
+up to 3 participants
+
+represents internal confirmation
+
+
+
+---
+
+Join
+
+message type: acknowledgment
+
+unlimited participants
+
+represents external validation
+
+
+
+---
+
+EVENT-ONLY ARCHITECTURE
+
+The protocol minimizes on-chain storage.
+
+It does not store:
+
+messages
+
+agreements
+
+relationships
+
+
+It only records:
+
+events
+
+basic counters (balances)
+
+identity anchors (seeds)
+
+
+
+---
+
+RESULT
+
+The blockchain acts as:
+
+A global, immutable event log
+not a database of structured meaning
+
+
+---
+
+APPLICATION LAYER
+
+All interpretation happens off-chain.
+
+The application:
+
+listens to all three chains
+
+indexes events
+
+displays them as separate channels
+
+
+
+---
+
+User Interface Concept
+
+Users interact through clearly separated channels:
+
+Family (Solana)
+
+Work (L2)
+
+Premium (Ethereum)
+
+
+There is no automatic mixing between them.
+
+
+---
+
+COST AS A USER TOOL
+
+Users choose the cost level of their communication:
+
+low cost → Solana
+
+medium cost → L2
+
+high cost → Ethereum
+
+
+Cost becomes a deliberate choice rather than a constraint.
+
+
+---
+
+RESILIENCE AND AVAILABILITY
+
+Multi-chain architecture improves reliability.
+
+If one network is:
+
+congested
+
+restricted
+
+unavailable
+
+
+Users can switch to another channel.
+
+
+---
+
+Example
+
+Ethereum unavailable → use L2 or Solana
+
+L2 congested → use Solana
+
+Solana unavailable → use Ethereum
+
+
+
+---
+
+RESULT
+
+Communication is not dependent on a single network.
+
+
+---
+
+SPAM AND SIGNAL DYNAMICS
+
+Each channel has its own behavior:
+
+
+---
+
+Ethereum:
+
+high cost
+
+strong natural filtering
+
+
+
+---
+
+L2:
+
+moderate cost
+
+balanced filtering
+
+
+
+---
+
+Solana:
+
+near-zero cost
+
+requires application-level moderation
+
+
+
+---
+
+SYSTEM CLASSIFICATION
+
+SOS is not:
+
+a financial system
+
+a payment network
+
+a token economy
+
+a ranking engine
+
+
+
+---
+
+SOS is:
+
+A multi-channel communication protocol
+with independent economic environments
+and event-based interaction recording
+
+
+---
+
+ARCHITECTURE SUMMARY
+
+
+---
+
+Chain Layer:
+
+Ethereum
+
+L2
+
+Solana
+
+
+
+---
+
+Protocol Layer:
+
+Mint (message emission)
+
+Trust (internal signal)
+
+Join (external signal)
+
+
+
+---
+
+Identity Layer:
+
+unified identity (optional)
+
+separate identities (optional)
+
+
+
+---
+
+Application Layer:
+
+indexing
+
+display
+
+filtering
+
+
+
+---
+
+KEY PROPERTIES
+
+separation of communication contexts
+
+user-controlled identity
+
+cost-based interaction choice
+
+resilience across networks
+
+minimal on-chain storage
+
+event-based architecture
+
+
+
+---
+
+FINAL STATEMENT
+
+SOS is a multi-chain communication protocol that separates interactions by context, cost, and intent.
+
+Users decide:
+
+which network to use
+
+how to structure identity
+
+how much to spend per interaction
+
+
+All communication is recorded as immutable events, while meaning and interpretation remain off-chain and user-defined.
