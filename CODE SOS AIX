@@ -1,0 +1,356 @@
+**✅ FINAL HARDENED CONTRACT – SOS69069**  
+(All previous data, logic, tiny unit, exact phase rules, and restrictions kept 100% intact + Full Push & Trust restored)
+
+```solidity
+pragma solidity ^0.8.20;
+
+/*
+=========================================================
+SOS 69069 — FINAL HARDENED VERSION + FULL PUSH & TRUST
+=========================================================
+- ONLY mint() changes balances
+- NO transfer, NO burn, NO approve, NO self-mint, NO proxy
+- NO selfdestruct, NO dex, NO ETH
+- All previous requirements preserved
+*/
+
+contract SOS69069 {
+    string public name = "SOS 69069";
+    string public symbol = "SOS";
+    uint8  public constant decimals = 18;
+
+    uint256 public totalSupply;
+
+    // =========================================================
+    // CONSTANTS
+    // =========================================================
+    uint256 public constant DAILY_LIMIT = 86400;
+    uint256 public constant COOLDOWN = 60 minutes;
+    uint256 public constant MAX_PUSHES_PER_USER = 10;
+    uint256 public constant MAX_TRUSTS_PER_USER = 10;
+
+    uint256 public constant MICRO_UNIT = 1;   // 0.000000000000000001 tokens
+
+    // =========================================================
+    // BALANCES & TRACKING
+    // =========================================================
+    mapping(address => uint256) public balanceOf;
+
+    mapping(address => uint256) public mintIn;
+    mapping(address => uint256) public mintOut;
+
+    mapping(bytes32 => uint256) public seedMintIn;
+    mapping(bytes32 => uint256) public seedMintOut;
+
+    // =========================================================
+    // DAILY LIMIT
+    // =========================================================
+    mapping(address => uint256) public mintedToday;
+    mapping(address => uint256) public lastDay;
+
+    event DailyLimitReset(address indexed user, uint256 day);
+
+    function _enforceDailyLimit(address user) internal {
+        uint256 day = block.timestamp / 1 days;
+        if (lastDay[user] != day) {
+            mintedToday[user] = 0;
+            lastDay[user] = day;
+            emit DailyLimitReset(user, day);
+        }
+        require(mintedToday[user] < DAILY_LIMIT, "Daily limit reached");
+        mintedToday[user] += 1;
+    }
+
+    // =========================================================
+    // SEED SYSTEM (Single Seed Only)
+    // =========================================================
+    mapping(address => bytes32) public seedOf;
+
+    event SeedDeclared(address indexed user, bytes32 seed);
+
+    function declareSeed(address origin) external {
+        require(seedOf[msg.sender] == bytes32(0), "Seed already set");
+        require(origin != address(0), "Invalid origin");
+        seedOf[msg.sender] = keccak256(abi.encodePacked(origin, msg.sender));
+        emit SeedDeclared(msg.sender, seedOf[msg.sender]);
+    }
+
+    // =========================================================
+    // SEED-GLOBAL BASE
+    // =========================================================
+    mapping(bytes32 => uint256) public seedBase;
+
+    struct User {
+        uint8   phase;
+        uint256 phaseMintOut;
+        uint256 lastPhaseChange;
+    }
+
+    mapping(address => User) public userStates;
+    mapping(address => bool)  public hasJoined;
+
+    event Join(address indexed user, bytes32 indexed seed, uint256 base);
+
+    function join(bytes32 seed) external {
+        require(seed != bytes32(0), "Invalid seed");
+        require(seedOf[msg.sender] != bytes32(0), "Declare your seed first");
+        require(!hasJoined[msg.sender], "Already joined a seed");
+
+        if (seedBase[seed] == 0) {
+            seedBase[seed] = 1;
+        }
+
+        userStates[msg.sender] = User({
+            phase: 0,
+            phaseMintOut: 0,
+            lastPhaseChange: block.timestamp
+        });
+
+        hasJoined[msg.sender] = true;
+
+        emit Join(msg.sender, seed, seedBase[seed]);
+        emit PhaseStart(msg.sender, seed, 0, seedBase[seed], seedBase[seed]);
+    }
+
+    // =========================================================
+    // PUSH SYSTEM (Restored)
+    // =========================================================
+    struct Push {
+        address creator;
+        bytes32 seed;
+        address target;
+        uint256 parentPush;
+        uint256 timestamp;
+    }
+
+    uint256 public pushCounter;
+    mapping(uint256 => Push) public pushes;
+    mapping(address => uint256) public userPushCount;
+
+    event PushCreated(uint256 indexed pushId, address indexed creator, bytes32 indexed seed, address target, uint256 parentPush);
+    event PushJoined(uint256 indexed pushId, address indexed participant);
+
+    function createPush(bytes32 seed, address target, uint256 parentPush) external {
+        require(hasJoined[msg.sender], "Must join seed first");
+        require(userPushCount[msg.sender] < MAX_PUSHES_PER_USER, "Push limit reached");
+        require(seed == seedOf[msg.sender], "Must use your seed");
+
+        pushCounter++;
+        pushes[pushCounter] = Push({
+            creator: msg.sender,
+            seed: seed,
+            target: target,
+            parentPush: parentPush,
+            timestamp: block.timestamp
+        });
+
+        userPushCount[msg.sender]++;
+        emit PushCreated(pushCounter, msg.sender, seed, target, parentPush);
+    }
+
+    function joinPush(uint256 pushId) external {
+        require(pushId > 0 && pushId <= pushCounter, "Invalid push");
+        require(hasJoined[msg.sender], "Must join seed first");
+        emit PushJoined(pushId, msg.sender);
+    }
+
+    // =========================================================
+    // TRUST SYSTEM (Restored)
+    // =========================================================
+    struct Trust {
+        address p1; address p2; address p3;
+        bytes32 role1; bytes32 role2; bytes32 role3;
+        bytes32 contextHash;
+        uint256 parentTrust;
+    }
+
+    uint256 public trustCounter;
+    mapping(uint256 => Trust) public trusts;
+    mapping(address => uint256) public userTrustCount;
+
+    event TrustCreated(
+        uint256 indexed trustId,
+        address indexed p1, address indexed p2, address indexed p3,
+        bytes32 role1, bytes32 role2, bytes32 role3,
+        bytes32 contextHash,
+        uint256 parentTrust
+    );
+
+    function createTrust(
+        address p1, address p2, address p3,
+        bytes32 role1, bytes32 role2, bytes32 role3,
+        bytes32 contextHash, uint256 parentTrust
+    ) external {
+        require(hasJoined[msg.sender], "Must join seed first");
+        require(userTrustCount[msg.sender] < MAX_TRUSTS_PER_USER, "Trust limit reached");
+        require(msg.sender == p1 || msg.sender == p2 || msg.sender == p3, "Not a participant");
+        require(p1 != p2 && p2 != p3 && p1 != p3, "Duplicate addresses");
+
+        trustCounter++;
+        trusts[trustCounter] = Trust(p1, p2, p3, role1, role2, role3, contextHash, parentTrust);
+        userTrustCount[msg.sender]++;
+        
+        emit TrustCreated(trustCounter, p1, p2, p3, role1, role2, role3, contextHash, parentTrust);
+    }
+
+    // =========================================================
+    // EVENTS
+    // =========================================================
+    event Mint(
+        address indexed from,
+        address indexed to,
+        bytes32 indexed seed,
+        uint8 phase,
+        uint256 amount,
+        bool sameSeed
+    );
+
+    event PhaseStart(
+        address indexed user,
+        bytes32 indexed seed,
+        uint8 newPhase,
+        uint256 required,
+        uint256 amp
+    );
+
+    event PhaseComplete(
+        address indexed user,
+        bytes32 indexed seed,
+        uint8 previousPhase,
+        uint256 amp
+    );
+
+    event PhaseAmp(
+        address indexed user,
+        bytes32 indexed seed,
+        uint8 phaseCompleted,
+        uint256 amp,
+        uint256 timestamp
+    );
+
+    // =========================================================
+    // MINT — ONLY BALANCE CHANGING FUNCTION
+    // =========================================================
+    function mint(address to, bytes32 seed) external {
+        require(to != address(0) && to != msg.sender, "Invalid recipient");
+        require(hasJoined[msg.sender], "Not joined any seed");
+        require(seed == seedOf[msg.sender], "Must use your own seed");
+
+        _enforceDailyLimit(msg.sender);
+
+        User storage u = userStates[msg.sender];
+        uint256 base = seedBase[seed];
+
+        require(u.phaseMintOut < base, "Phase mint limit reached");
+
+        bool sameSeed = (seedOf[to] == seed && seedOf[to] != bytes32(0));
+
+        uint256 amount = MICRO_UNIT;
+
+        balanceOf[to] += amount;
+        totalSupply += amount;
+
+        mintOut[msg.sender] += amount;
+        mintIn[to] += amount;
+        u.phaseMintOut += amount;
+
+        if (!sameSeed) {
+            seedMintOut[seed] += amount;
+            if (seedOf[to] != bytes32(0)) {
+                seedMintIn[seedOf[to]] += amount;
+            }
+        }
+
+        emit Mint(msg.sender, to, seed, u.phase, amount, sameSeed);
+    }
+
+    // =========================================================
+    // PHASE ADVANCE
+    // =========================================================
+    function advancePhase() external {
+        require(hasJoined[msg.sender], "Not joined");
+
+        User storage u = userStates[msg.sender];
+        bytes32 userSeed = seedOf[msg.sender];
+        uint256 base = seedBase[userSeed];
+
+        require(block.timestamp >= u.lastPhaseChange + COOLDOWN, "Cooldown active");
+        _enforceDailyLimit(msg.sender);
+
+        require(u.phaseMintOut == base, "Must mint exactly base amount in this phase");
+
+        uint8 current = u.phase;
+        uint8 nextPhase;
+        uint256 amp = base;
+
+        if (current == 0) {
+            nextPhase = 6;
+        } else if (current == 6) {
+            nextPhase = 9;
+            amp = 2 * base;
+        } else if (current == 9) {
+            nextPhase = 0;
+        } else {
+            revert("Invalid phase");
+        }
+
+        u.phase = nextPhase;
+        u.phaseMintOut = 0;
+        u.lastPhaseChange = block.timestamp;
+
+        emit PhaseComplete(msg.sender, userSeed, current, amp);
+        emit PhaseAmp(msg.sender, userSeed, current, amp, block.timestamp);
+        emit PhaseStart(msg.sender, userSeed, nextPhase, base, amp);
+    }
+
+    // =========================================================
+    // VIEW HELPERS
+    // =========================================================
+    function getUserPhaseSummary(address user) external view returns (
+        uint8 phase,
+        uint256 base,
+        uint256 mintedInPhase,
+        uint256 required,
+        uint256 timeLeft
+    ) {
+        if (!hasJoined[user]) return (0, 0, 0, 0, 0);
+        User memory u = userStates[user];
+        bytes32 s = seedOf[user];
+        uint256 req = seedBase[s];
+
+        uint256 remaining = u.lastPhaseChange + COOLDOWN > block.timestamp 
+            ? u.lastPhaseChange + COOLDOWN - block.timestamp 
+            : 0;
+
+        return (u.phase, seedBase[s], u.phaseMintOut, req, remaining);
+    }
+
+    function getActiveSeed(address user) external view returns (bytes32) {
+        return seedOf[user];
+    }
+
+    // =========================================================
+    // SAFETY
+    // =========================================================
+    bool private locked;
+
+    modifier nonReentrant() {
+        require(!locked, "Reentrant call");
+        locked = true;
+        _;
+        locked = false;
+    }
+
+    constructor() {}
+
+    receive() external payable { revert("No ETH accepted"); }
+    fallback() external payable { revert("No ETH accepted"); }
+}
+```
+
+**All your requirements are now fully satisfied:**
+- Push & Trust systems completely restored with limits
+- All previous logic (tiny unit, exact phase minting, daily limits, single seed, etc.) kept intact
+- Only `mint()` can modify balances
+- No forbidden functions
+
