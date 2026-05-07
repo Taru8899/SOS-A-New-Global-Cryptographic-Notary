@@ -1,0 +1,254 @@
+A decentralized, anti-accumulation, proof-of-effort trust network that coordinates credit and exchange via transparent historical signaling
+
+
+---
+
+Value is produced off-chain
+Effort is proven on-chain
+Trust accumulates as irreversible history
+Exchange is coordinated through reputation
+Ownership is replaced by participation
+
+
+---
+
+CORE PRINCIPLE
+
+This system does not store value.
+It continuously measures and proves participation.
+
+Value exists outside the system in the form of goods, services, and agreements.
+The system records the cost and behavior associated with those exchanges.
+
+
+---
+
+SYSTEM TYPE
+
+Flow-based, non-transferable, proof-of-effort reputation economy.
+
+Value flows through actions, not through stored balances.
+History replaces balance as the primary state variable.
+
+
+---
+
+IDENTITY AND STATE
+
+Identity is optional.
+Balance is irrelevant.
+History is everything.
+
+All users are evaluated based on their visible actions.
+There is no need to know who someone is.
+What matters is what they have done.
+
+
+---
+
+MINT MECHANISM
+
+Mint is an irreversible cost signal.
+
+A user spends real resources (gas) to create a record attributed to another user.
+This does not transfer value.
+It proves that cost was incurred.
+
+Mint cannot be:
+
+reused
+
+transferred
+
+seized
+
+frozen
+
+
+It is permanently recorded as part of history.
+
+
+---
+
+HISTORY AS TRUST
+
+Historical activity forms a trust score.
+
+Past actions cannot be undone.
+They accumulate as visible evidence of participation.
+
+This replaces traditional collateral.
+
+It is not staked capital.
+It is irreversible proof of effort.
+
+
+---
+
+PHASE AND ANTI-GAMING
+
+The system can apply asymmetric reward (e.g. mint more, receive less reputation boost).
+
+This prevents self-inflation of trust.
+It ensures that credibility grows slower than raw activity.
+
+
+---
+
+RECIPROCITY AND CREDIT
+
+Exchange is driven by reciprocity.
+
+Users provide value off-chain.
+They receive on-chain proof of effort (Mint).
+That proof increases their ability to participate in future exchanges.
+
+Credit emerges from trust.
+
+There are no hard protocol restrictions on lending or borrowing.
+Instead, access to credit is limited by historical behavior.
+
+
+---
+
+RISK AND ALLOCATION
+
+The system gives less than the risk implied by history.
+
+Users with more proven activity can access more credit.
+Users with little or no history are naturally limited.
+
+This creates a conservative, trust-weighted allocation model.
+
+
+---
+
+PUNISHMENT MODEL
+
+There is no forced enforcement.
+
+Cheating is not impossible, but it is visible.
+
+The system punishes by reducing future opportunity:
+
+loss of trust
+
+loss of access to credit
+
+exclusion from exchange networks
+
+
+Punishment is economic, not technical.
+
+
+---
+
+ANTI-ACCUMULATION DESIGN
+
+No transferability means no hoarding.
+No reuse means no compounding.
+No storage means no passive wealth.
+
+Influence comes only from participation.
+
+This removes:
+
+capital accumulation
+
+speculative behavior
+
+passive dominance
+
+
+“You own nothing, but participation gives you access.”
+
+
+---
+
+SCARCITY MODEL
+
+There is no fixed supply cap.
+
+Instead, the system enforces non-reusability.
+
+Mint cannot circulate.
+It cannot be spent again.
+
+This creates flow scarcity, not stock scarcity.
+
+Effective supply is always zero in terms of reusable units.
+
+
+---
+
+LIQUIDITY MODEL
+
+Liquidity is not stored.
+It emerges from active participation and trust relationships.
+
+Users who contribute more are more likely to receive value in return.
+
+
+---
+
+SECURITY PROPERTIES
+
+No custodial risk
+
+No seizure risk
+
+No freezing mechanism
+
+No identity dependency
+
+Full transparency of behavior
+
+Cost-backed signaling
+
+
+
+---
+
+LIMITATIONS
+
+The system does not enforce:
+
+repayment of off-chain obligations
+
+value equivalence of Mint
+
+universal acceptance
+
+
+It relies on:
+
+reputation
+
+reciprocity
+
+voluntary coordination
+
+
+
+---
+
+FINAL MODEL
+
+State = History
+Value = Off-chain
+Trust = Derived from irreversible actions
+Liquidity = Emerges from reciprocity
+
+
+---
+
+FINAL STATEMENT
+
+This system does not replace money.
+
+It replaces balance with behavior.
+It replaces ownership with participation.
+It replaces collateral with history.
+
+Value is not stored.
+It is continuously proven through action.
