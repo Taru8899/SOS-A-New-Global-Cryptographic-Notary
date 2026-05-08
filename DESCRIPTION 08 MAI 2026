@@ -1,0 +1,142 @@
+**✅ ULTRA-PRECISE COMPLETE DESCRIPTION OF SOS69069 (v7 Hardened)**
+
+### 1. Overall Purpose
+SOS69069 is a **non-transferable, non-burnable, ultra-micro mint-only** token contract designed around **social coordination mechanics** (Seeds, Pushes, Trusts, and phased progression). 
+
+- The only way tokens are created is through the `mint()` function (1 atomic unit = `1` wei = 0.000000000000000001 SOS per mint).
+- There are **no transfers, approvals, burns, or self-mints**.
+- The system revolves around **Seeds** (communities), **personal phased minting limits**, daily activity limits, and social actions (Push/Trust) that force additional mints.
+
+### 2. Core Constants
+| Constant                | Value          | Meaning |
+|-----------------------|----------------|-------|
+| `DAILY_LIMIT`         | 86400          | Max mint actions per user per day (UTC day) |
+| `COOLDOWN`            | 60 minutes     | Minimum time between `advancePhase()` calls |
+| `MAX_PUSHES_PER_USER` | 10             | Max pushes one user can create |
+| `MAX_TRUSTS_PER_USER` | 10             | Max trusts one user can create |
+| `COUNTER_RESET`       | 9000           | Push & Trust counters reset to 0 after reaching this |
+| `MICRO_UNIT`          | 1              | Fixed mint amount (10^-18 tokens) |
+
+### 3. Data Structures & Mappings
+
+**Token Accounting:**
+- `balanceOf[address]` — User token balance (only increased by mint)
+- `mintIn[address]` / `mintOut[address]` — Total received / sent mints
+- `seedMintIn[bytes32]` / `seedMintOut[bytes32]` — Seed-level tracking
+
+**Seed System:**
+- `seedOf[address]` → User’s personal seed hash (set once)
+- `seedBase[bytes32]` → Current base multiplier for a seed (starts at 1, can grow)
+
+**User State:**
+```solidity
+struct User {
+    uint8   phase;          // 0 → 6 → 9 → 0 cycle
+    uint256 phaseMintOut;   // How many micro units minted in current phase
+    uint256 lastPhaseChange;
+    uint256 joinBase;       // Base at time of joining
+    uint256 phaseBase;      // Personal base (updated when returning to phase 0)
+}
+```
+
+**Other:**
+- `parentOf[address]` — Optional referral/parent link
+- `hasJoined[address]`, `mintedToday[address]`, `lastDay[address]`
+- `pushCounter`, `trustCounter`, `userPushCount`, `userTrustCount`
+
+### 4. All Events (Complete List)
+
+1. **`SeedDeclared`** — User declares their seed
+2. **`DailyLimitReached`** — User hits 86400 mints in a day
+3. **`Join`** — User joins a seed (includes parent)
+4. **`ParentSet`** — Emitted when parent is recorded
+5. **`Mint`** — Every single mint action
+6. **`PhaseStart`** — New phase begins
+7. **`PhaseComplete`** — Phase completed
+8. **`PhaseAmp`** — Phase completion with amp info
+9. **`BaseUpdated`** — When user returns to phase 0 and `phaseBase` is synchronized with `seedBase`
+10. **`PushCreated`** — Push created (simplified)
+11. **`PushJoined`** — User joins a push
+12. **`TrustCreated`** — Trust created
+
+### 5. Functions & Exact Rules
+
+#### Setup Functions
+- **`declareSeed(address origin)`**  
+  Sets `seedOf[msg.sender]` = `keccak256(origin + msg.sender)`. Can be called only once.
+
+- **`join(bytes32 seed, address parent)`**  
+  Requirements:
+  - Must have declared seed
+  - Not already joined
+  - Parent ≠ self
+  - Initializes `phase=0`, `phaseBase = joinBase = seedBase[seed]`
+  - Optionally sets parent
+
+#### Minting (The Only Balance-Changing Function)
+- **`mint(address to, bytes32 seed)`** (public, not external)
+  **Strict Rules:**
+  - `to != address(0)` and `to != msg.sender` (no self-mint)
+  - Caller must have joined
+  - Must use their own seed
+  - `_enforceDailyLimit()` called
+  - `phaseMintOut < phaseBase` (personal limit)
+  - Mints exactly `1` wei to `to`
+  - Updates all counters (`mintIn`, `mintOut`, `seedMint*`, `totalSupply`, `phaseMintOut`)
+
+#### Phase System (Core Progression)
+**Cycle:** Phase 0 → 6 → 9 → 0 → ...
+
+- **`advancePhase()`**
+  Requirements:
+  - Cooldown (60 min) respected
+  - Daily limit enforced
+  - Must have minted **exactly** `phaseBase` amount in current phase
+
+  **Phase Transitions:**
+  | Current | Next | Amp | Note |
+  |---------|------|-----|------|
+  | 0       | 6    | 1x  | - |
+  | 6       | 9    | 2x  | - |
+  | 9       | 0    | 1x  | **phaseBase** updated to current `seedBase` + `BaseUpdated` event |
+
+#### Social Actions (Push & Trust)
+
+**Push System:**
+- **`createPush(bytes32 contextHash, uint256 parentPush, address mintTo)`**
+  - Limited to 10 per user
+  - Counter resets at 9000
+  - Emits `PushCreated`
+  - **Forces** a `mint(mintTo, seed)` (atomic mint)
+
+- **`joinPush(uint256 pushId, address mintTo)`**
+  - Emits `PushJoined`
+  - **Forces** a `mint(mintTo, seed)`
+
+**Trust System:**
+- **`createTrust(p1, p2, p3, role1, role2, role3, contextHash, parentTrust, mintTo)`**
+  - Limited to 10 per user
+  - Caller must be one of p1/p2/p3
+  - No duplicate addresses
+  - Counter resets at 9000
+  - Emits `TrustCreated`
+  - **Forces** a `mint(mintTo, seed)`
+
+### 6. Key Logic & Restrictions Summary
+
+**Hardened Rules (Strictly Enforced):**
+- **Only `mint()`** can change balances or totalSupply.
+- No transfers, burns, approvals, allowances, selfdestruct, proxy, ETH.
+- No self-minting.
+- Daily limit is soft (event-based, does not revert).
+- Every Push/Trust action **must** trigger an extra atomic mint.
+- Personal `phaseBase` only updates when completing Phase 9 → returning to 0.
+- `seedBase` can be increased by external mechanisms (not in this contract version).
+- All major actions require the user to have joined a seed.
+
+**Economic Design:**
+- Extremely slow emission (1e-18 per mint).
+- Users must complete full phase cycles (minting exact `phaseBase` amount each phase) to progress and sync their personal base.
+- Social actions (Push/Trust) are encouraged because they force minting.
+
+This contract is a **highly restricted social minting game** focused on coordination, phased progression, and micro-emission, with strong anti-abuse hardening.
