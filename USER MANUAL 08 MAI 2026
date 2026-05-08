@@ -1,0 +1,186 @@
+**✅ SOS69069 — OFFICIAL USER MANUAL (v7 Hardened)**  
+**Ultra Precise Edition**
+
+---
+
+### **1. Introduction**
+
+SOS69069 is a **strictly hardened**, non-transferable, micro-mint token on Ethereum-compatible chains.  
+**Token Symbol:** SOS | **Name:** SOS 69069 | **Decimals:** 18
+
+**Core Philosophy:**  
+Only one function (`mint()`) can create tokens. Every action is logged, rate-limited, and socially coordinated through **Seeds**, **Phases**, **Pushes**, and **Trusts**.
+
+**Key Restriction:** You can **never** transfer, burn, sell, or approve these tokens.
+
+---
+
+### **2. Getting Started**
+
+#### **Step 1: Declare Your Seed**
+```solidity
+declareSeed(address origin)
+```
+- Must be called **once** per address.
+- Creates your unique `seedOf[msg.sender]` = `keccak256(origin + msg.sender)`.
+- This seed is permanent and links all your future activity.
+
+#### **Step 2: Join a Seed**
+```solidity
+join(bytes32 seed, address parent)
+```
+**Requirements:**
+- You must have declared your seed first.
+- You can only join **once**.
+- `parent` can be `address(0)` (no parent) or any address (except yourself).
+
+**What happens:**
+- You are assigned to the chosen `seed`.
+- Your `phase` = 0.
+- Your `joinBase` and `phaseBase` are set to the current `seedBase`.
+- `hasJoined[msg.sender]` = `true`.
+
+---
+
+### **3. Minting Tokens (The Only Way to Get Tokens)**
+
+#### **Function:**
+```solidity
+mint(address to, bytes32 seed)
+```
+
+**Strict Rules:**
+- `to` **cannot** be `address(0)` or yourself (no self-mint).
+- You must use **your own declared seed**.
+- You must have joined a seed.
+- You cannot exceed your **personal `phaseBase`** in the current phase.
+- You cannot exceed **86,400 mints per UTC day** (soft limit — only emits event).
+
+**Amount minted:** Always exactly **0.000000000000000001** SOS (1 wei).
+
+---
+
+### **4. Phase System (Progression Cycle)**
+
+You progress through phases by minting and then calling `advancePhase()`.
+
+**Phase Cycle:**
+| Current Phase | Next Phase | Amp Factor | Action Required |
+|---------------|------------|----------|-----------------|
+| 0             | 6          | 1x       | Mint exactly `phaseBase` |
+| 6             | 9          | 2x       | Mint exactly `phaseBase` |
+| 9             | 0          | 1x       | Mint exactly `phaseBase` → **phaseBase updated** |
+
+#### **advancePhase() Rules**
+- Must wait **60 minutes** (cooldown) since last phase change.
+- Must have minted **exactly** your current `phaseBase` amount in this phase.
+- Calls `_enforceDailyLimit()`.
+
+**Important:** When you complete Phase 9 → 0, your personal `phaseBase` is updated to the current `seedBase` and a `BaseUpdated` event is emitted.
+
+---
+
+### **5. Daily Limit**
+
+- **86,400 mint actions** per UTC day per address.
+- The limit is **soft** — it does **not** revert.
+- When reached, `DailyLimitReached` event is emitted.
+- Resets automatically at midnight UTC.
+
+---
+
+### **6. Social Actions**
+
+#### **A. Push System**
+- Limited to **10 pushes per user**.
+- `pushCounter` resets at 9000.
+
+**Create Push:**
+```solidity
+createPush(bytes32 contextHash, uint256 parentPush, address mintTo)
+```
+- Forces **one atomic mint** to `mintTo`.
+
+**Join Push:**
+```solidity
+joinPush(uint256 pushId, address mintTo)
+```
+- Forces **one atomic mint** to `mintTo`.
+
+#### **B. Trust System**
+- Limited to **10 trusts per user**.
+- `trustCounter` resets at 9000.
+
+**Create Trust:**
+```solidity
+createTrust(p1, p2, p3, role1, role2, role3, contextHash, parentTrust, mintTo)
+```
+**Rules:**
+- You must be one of `p1`, `p2`, or `p3`.
+- All three addresses must be different.
+- Forces **one atomic mint** to `mintTo`.
+
+---
+
+### **7. Parent / Referral System**
+
+- Optional during `join()`.
+- Stored in `parentOf[address]`.
+- `ParentSet` event emitted if parent is set.
+
+---
+
+### **8. View Functions (Useful for UIs)**
+
+- `getUserPhaseSummary(address user)` — Returns full phase info + bases + cooldown time left.
+- `getActiveSeed(address user)` — Returns user’s seed.
+- `getSeedInfo(bytes32 seed)` — Returns current `seedBase`.
+- Public mappings: `balanceOf`, `phase`, `phaseBase`, `seedOf`, `parentOf`, etc.
+
+---
+
+### **9. Events Summary (All Events You Will See)**
+
+| Event                  | When Triggered |
+|------------------------|----------------|
+| `SeedDeclared`         | After `declareSeed()` |
+| `Join`                 | After successful `join()` |
+| `ParentSet`            | When parent is recorded |
+| `Mint`                 | Every single mint |
+| `PhaseStart`           | New phase begins |
+| `PhaseComplete`        | Phase completed |
+| `PhaseAmp`             | Phase completed (with amp info) |
+| `BaseUpdated`          | When returning to Phase 0 (phaseBase updated) |
+| `DailyLimitReached`    | When user hits 86,400 mints/day |
+| `PushCreated`          | When a push is created |
+| `PushJoined`           | When someone joins a push |
+| `TrustCreated`         | When a trust is created |
+
+---
+
+### **10. Hard Restrictions (Never Violated)**
+
+- **No transfers** — Tokens are soulbound.
+- **No approvals / allowances**.
+- **No burns**.
+- **No self-minting**.
+- **No ETH** — Contract rejects all native currency.
+- **No proxies, no selfdestruct**.
+- **Mint is the only** balance-changing function.
+
+---
+
+### **11. Strategy Tips**
+
+1. Join a seed with active participants (higher `seedBase` growth potential).
+2. Mint consistently to complete phases faster.
+3. Use Pushes and Trusts to coordinate with others while forcing extra mints.
+4. Time your `advancePhase()` calls carefully due to the 60-minute cooldown.
+5. Choose `mintTo` addresses strategically (can be anyone except yourself).
+
+---
+
+**Contract deployed under the principle of maximum transparency and minimum attack surface.**
+
+This manual is 100% based on the v7 Hardened contract code you provided. All rules, limits, and mechanics described here are strictly enforced on-chain.
+
