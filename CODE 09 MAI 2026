@@ -1,0 +1,118 @@
+**✅ Updated Contract**
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/**
+ * NON-STANDARD ETH SOS AIX by 69069
+ * 
+ * SAFETY BLOCK:
+ * - Exactly 0.000000000000000001 wei (1 wei) mint per call
+ * - Push is the only mint function
+ * - No self mint
+ * - No mint to zero address
+ * - No transfers
+ * - No burn
+ * - No DEX
+ * - No proxy
+ * - No allowance / approve
+ * - No selfdestruct
+ * - No ownable
+ * - Contract accepts NO ETH and holds NO ETH
+ * - Pure forward mint logic only
+ * 
+ * Internal Naming:
+ * - totalSupply → _69069Phase
+ * - balanceOf   → Trustof
+ * - Mint to other address → Push
+ * - Mint received     → Trust
+ * - PushPush = transfer event (internal meaning)
+ */
+
+contract Sosaix69069 {
+    string public constant name = "SOS AIX";
+    string public constant symbol = "SOS AIX";
+    uint8 public constant decimals = 18;
+
+    // ==================== INTERNAL NAMES ====================
+    uint256 private _69069Phase;
+    mapping(address => uint256) private Trustof;
+    mapping(address => bool) private _hasReceived;
+
+    bool private _pushing;
+
+    // ==================== CONSTANTS FOR SAFETY ENFORCEMENT ====================
+    uint256 private constant EXACT_MINT_AMOUNT = 1; // Exactly 1 wei token per call
+
+    // ==================== EVENTS ====================
+    event Push(address indexed to, uint256 amount);
+
+    // ==================== ERRORS ====================
+    error ReentrantPush();
+    error NoETHAccepted();
+    error PushToZeroAddress();
+    error NoSelfMint();
+    error NoSelfPush();
+
+    // ==================== STANDARD VIEWS ====================
+    function totalSupply() public view returns (uint256) {
+        return _69069Phase;
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return Trustof[account];
+    }
+
+    // New view function
+    function hasBeenPushed(address account) public view returns (bool) {
+        return _hasReceived[account];
+    }
+
+    // ==================== PUSH = ONLY MINT FUNCTION ====================
+    function Push(address to) external {
+        if (_pushing) revert ReentrantPush();
+        _pushing = true;
+
+        // === SAFETY ENFORCEMENT ===
+        if (msg.value != 0) revert NoETHAccepted();
+        if (to == address(0)) revert PushToZeroAddress();
+        if (to == msg.sender) revert NoSelfMint();
+        if (to == address(this)) revert NoSelfPush();
+
+        uint256 amount = EXACT_MINT_AMOUNT;
+        address caller = msg.sender;
+
+        // Pure mint logic - exactly 1 wei only
+        Trustof[to] += amount;
+        _69069Phase += amount;
+
+        // Track first push
+        if (!_hasReceived[to]) {
+            _hasReceived[to] = true;
+        }
+
+        // Push event for every mint
+        emit Push(to, amount);
+
+        _pushing = false;
+    }
+
+    receive() external payable { revert NoETHAccepted(); }
+    fallback() external payable { revert NoETHAccepted(); }
+}
+```
+
+---
+
+**Explanation (outside the code):**  
+
+You need a simple `hasBeenPushed(address)` view function because **there is no other reliable on-chain way** to know whether an address has ever received a Push.  
+
+- Events are not readable inside smart contracts.  
+- You cannot loop through all past transactions or events on-chain.  
+- `balanceOf` alone is not enough (someone could theoretically receive 1 wei through other means in the future, or you might want to distinguish "never touched" vs "balance = 0 but was pushed before").  
+
+The `_hasReceived` mapping + `hasBeenPushed()` view is the standard, gas-efficient, and gas-cheap way to answer this question directly from the contract.  
+
+The rest of the code was kept intact as requested. Let me know if you need any further changes.
