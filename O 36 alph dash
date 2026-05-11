@@ -1,0 +1,134 @@
+**Here is the fully updated and rewritten master prompt with your new specifications:**
+
+---
+
+# 🔷 ORIGIN Ø-SYSTEM v5.1 — COMPLETE MASTER PROMPT
+
+---
+
+Cinematic ultra-high detail infographic on pure black background. Large, perfectly centered grid display of numbers from 0 to 36 in the futuristic **"Origin Ø-System"** modular alphabet.
+
+Each digit is constructed from a **single luminous vector circle (O)** representing the base numeric unit, with precise neon-colored **dash markers that cross the boundary edge of the circle** — each dash straddles both inside and outside the O ring, bisected by the circle's stroke.
+
+---
+
+## THE TWO-COLOR GRAMMAR (CORE PRINCIPLE)
+
+Every glyph uses exactly **two color roles**:
+
+- **Neon-blue `#00aaff`** → encodes the **first digit**
+- **Electric teal `#00ffcc`** → encodes the **second digit**
+
+Every glyph must visually express **both** colors — one for each digit position — no exceptions.
+
+---
+
+## WHAT CARRIES EACH COLOR
+
+| Digit value | Visual carrier |
+|-------------|---------------|
+| 1–8 | A dash crossing the O edge at the mapped clock position |
+| 9 | A small concentric circle inside O (center node) |
+| 0 | **The O circle itself** — no dash, the ring is the carrier |
+
+---
+
+## O CIRCLE COLOR RULE
+
+The O circle stroke is **not always white/silver**. Its color depends on whether either digit is 0:
+
+| Situation | O circle color |
+|-----------|---------------|
+| Neither digit is 0 (e.g. 36, 13, 27) | **White/silver** — neutral, both digits have their own markers |
+| Second digit is 0 (e.g. 10, 20, 30) | **Electric teal** — O carries the second digit (0) in teal |
+| First digit is 0 (e.g. 01–09, single digits) | **Neon-blue** — O carries the first digit (0) in blue |
+| Both digits are 0 (00) | O split: half blue, half teal — or a two-tone glow ring |
+
+---
+
+## SINGLE DIGIT RULE (0–9)
+
+Single digits are treated as **0X** — the first digit is always 0:
+
+- O circle = **neon-blue** (first digit = 0)
+- Marker = **electric teal** (second digit)
+
+---
+
+## DASH POSITION MAP
+
+```
+1 = vertical top         (12 o'clock)
+2 = diagonal NE          (1:30)
+3 = right horizontal     (3 o'clock)
+4 = diagonal SE          (4:30)
+5 = vertical bottom      (6 o'clock)
+6 = diagonal SW          (7:30)
+7 = left horizontal      (9 o'clock)
+8 = diagonal NW          (10:30)
+9 = small concentric circle inside O    (center node)
+0 = O circle itself      (no dash)
+```
+
+---
+
+## DASH CONSTRUCTION RULE (UPDATED)
+
+> Every dash **exactly crosses the edge of the O circle** and is **perfectly centered** on the circumference.  
+> **Total dash length = exactly ½ the radius of the O circle.**  
+> - One half of the dash length lies **inside** the O  
+> - One half of the dash length lies **outside** the O  
+> The circle's stroke precisely bisects every dash at its exact midpoint.
+
+**Additional mandatory rules:**
+- Dash thickness = **always exactly 2×** the stroke thickness of the O circle
+- Dash orientation = radial (perfectly aligned with the radius at the crossing point)
+- Consistent dash length and thickness across all glyphs
+- Dashes must clearly pierce the ring — never fully inside or fully outside
+- For better visibility, the inner and outer extensions should be strong and balanced
+
+---
+
+## REPEATED-DIGIT RULE — PARALLEL CROSSING DASHES
+
+For numbers where both digits are identical (11, 22, 33, etc.):
+
+> Render **two parallel dashes** at the same clock angle, **slightly separated laterally** (perpendicular to the radial direction).  
+> Both dashes follow the exact same length (½ radius), thickness (2× O stroke), and crossing depth.  
+> - First dash (offset left) = **neon-blue**  
+> - Second dash (offset right) = **electric teal**  
+> - O circle = **white/silver** (neutral)
+
+---
+
+## COLOR SEQUENCING & CENTER NODE
+
+- 9 as first digit → center node in **neon-blue**
+- 9 as second digit → center node in **electric teal**
+- **99** → two concentric rings (inner blue, outer teal)
+
+---
+
+## VISUAL STRUCTURE
+
+- Strict geometric grid, 0–36
+- Each symbol perfectly centered in its cell
+- Subtle glowing cyan grid background with radial 45° angle guides
+- Tiny futuristic numeric label beneath each glyph
+
+---
+
+## STYLE
+
+Soft cinematic lighting. Sacred geometry precision. Cybernetic scientific manuscript aesthetic. Ultra-clean vector design. Glowing alignment guides. O rings dynamically colored according to zero rules. Neon-blue and electric teal crossing dash markers with precise geometry. Parallel twin dashes for repeated digits. Museum-grade futuristic encoding system.
+
+---
+
+**Unified Grammar Summary**
+
+**shape = identity · direction = value · crossing = presence · parallel pair = repetition · color = order · O color = zero position**
+
+---
+
+This is the clean, final v5.1 master prompt incorporating all your latest requirements (dash length = ½ radius, dash thickness = 2× O thickness, radial alignment, etc.).
+
