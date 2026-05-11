@@ -1,0 +1,407 @@
+That is a much better architecture.
+
+You are now separating the system into:
+
+1. Immutable historical registry
+
+
+2. External proof/authentication systems
+
+
+
+This is the correct way to minimize:
+
+attack surface
+
+contract complexity
+
+upgrade risk
+
+verification ambiguity
+
+
+
+---
+
+🔷 FINAL ARCHITECTURE
+
+CONTRACT 1 — Immutable Entity Registry
+
+Purpose:
+
+permanent historical address grouping
+
+append-only entity graph
+
+minimal logic
+
+immutable storage layer
+
+
+This contract should:
+
+never change logic
+
+never handle complex proofs
+
+never decode O systems
+
+never perform dynamic authentication
+
+
+It only records:
+
+entities
+
+addresses
+
+historical linkage
+
+
+
+---
+
+CONTRACT 2 — O-Proof / Verification Layer
+
+Purpose:
+
+handle:
+
+O-grid proofs
+
+rotational verification
+
+challenge systems
+
+session logic
+
+dynamic authentication
+
+
+
+This contract can evolve independently.
+
+
+---
+
+🔷 YOUR NEW RULE
+
+You said:
+
+> each new address must submit his first mint event from contract address
+
+
+
+This is excellent because it creates:
+
+historical anchor verification
+
+Meaning: a wallet proves continuity using:
+
+its earliest interaction
+
+first mint event
+
+historical origin reference
+
+
+That is much cleaner than:
+
+storing complex interpretation logic on-chain.
+
+
+
+---
+
+🔷 CLEAN REGISTRY MODEL
+
+The immutable registry only verifies:
+
+Does this wallet have valid historical mint origin?
+
+If yes:
+
+attach address to entity.
+
+
+
+---
+
+🔷 SECURITY BENEFITS
+
+This architecture is strong because:
+
+Registry Contract
+
+tiny
+
+immutable
+
+auditable
+
+low gas
+
+low attack surface
+
+no upgrade dependency
+
+
+Proof Contract
+
+replaceable
+
+upgradeable
+
+experimental
+
+isolated from core history
+
+
+If proof system fails:
+
+historical entity graph survives.
+
+
+That is important.
+
+
+---
+
+🔷 IMMUTABLE HISTORICAL ENTITY REGISTRY
+
+This version matches your goal much better:
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+interface ISOS {
+    function firstMintBlock(address user) external view returns (uint256);
+}
+
+contract ImmutableEntityRegistry {
+
+    struct Entity {
+        address creator;
+        uint256 createdAt;
+        uint256 memberCount;
+    }
+
+    struct HistoricalRecord {
+        uint256 entityId;
+        address wallet;
+        uint256 attachedAt;
+        uint256 firstMintBlock;
+    }
+
+    uint256 public entityCounter;
+
+    address public immutable sosContract;
+
+    mapping(uint256 => Entity) public entities;
+
+    // wallet => entity
+    mapping(address => uint256) public walletToEntity;
+
+    // entity => wallets
+    mapping(uint256 => address[]) public entityMembers;
+
+    // immutable append-only history
+    HistoricalRecord[] public history;
+
+    event EntityCreated(
+        uint256 indexed entityId,
+        address indexed creator
+    );
+
+    event AddressAttached(
+        uint256 indexed entityId,
+        address indexed wallet,
+        uint256 firstMintBlock
+    );
+
+    constructor(address _sosContract) {
+        sosContract = _sosContract;
+    }
+
+    /// CREATE NEW ENTITY
+    function createEntity() external returns (uint256) {
+        require(walletToEntity[msg.sender] == 0, "Already attached");
+
+        uint256 mintBlock = ISOS(sosContract)
+            .firstMintBlock(msg.sender);
+
+        require(mintBlock > 0, "No SOS mint history");
+
+        entityCounter++;
+
+        entities[entityCounter] = Entity({
+            creator: msg.sender,
+            createdAt: block.timestamp,
+            memberCount: 1
+        });
+
+        walletToEntity[msg.sender] = entityCounter;
+
+        entityMembers[entityCounter].push(msg.sender);
+
+        history.push(HistoricalRecord({
+            entityId: entityCounter,
+            wallet: msg.sender,
+            attachedAt: block.timestamp,
+            firstMintBlock: mintBlock
+        }));
+
+        emit EntityCreated(entityCounter, msg.sender);
+
+        emit AddressAttached(
+            entityCounter,
+            msg.sender,
+            mintBlock
+        );
+
+        return entityCounter;
+    }
+
+    /// ATTACH NEW ADDRESS TO ENTITY
+    function attachToEntity(uint256 entityId) external {
+
+        require(
+            entities[entityId].creator != address(0),
+            "Entity does not exist"
+        );
+
+        require(
+            walletToEntity[msg.sender] == 0,
+            "Already attached"
+        );
+
+        uint256 mintBlock = ISOS(sosContract)
+            .firstMintBlock(msg.sender);
+
+        require(mintBlock > 0, "No SOS mint history");
+
+        walletToEntity[msg.sender] = entityId;
+
+        entities[entityId].memberCount++;
+
+        entityMembers[entityId].push(msg.sender);
+
+        history.push(HistoricalRecord({
+            entityId: entityId,
+            wallet: msg.sender,
+            attachedAt: block.timestamp,
+            firstMintBlock: mintBlock
+        }));
+
+        emit AddressAttached(
+            entityId,
+            msg.sender,
+            mintBlock
+        );
+    }
+
+    function getEntityMembers(
+        uint256 entityId
+    )
+        external
+        view
+        returns (address[] memory)
+    {
+        return entityMembers[entityId];
+    }
+
+    function historyLength()
+        external
+        view
+        returns (uint256)
+    {
+        return history.length;
+    }
+}
+---
+
+🔷 WHY THIS VERSION IS GOOD
+
+Minimal attack surface
+
+Very little logic.
+
+
+---
+
+Immutable history
+
+No deletion. No editing. Only append.
+
+
+---
+
+Historical anchoring
+
+Every address must have:
+
+valid first SOS mint history.
+
+
+
+---
+
+Future-proof
+
+O-proof systems stay external.
+
+You can:
+
+replace proof engines
+
+upgrade verification logic
+
+rotate authentication systems
+
+
+without touching:
+
+historical registry.
+
+
+
+---
+
+🔷 IMPORTANT DESIGN PROPERTY
+
+The registry itself does NOT decide:
+
+who is legitimate
+
+It only records:
+
+who successfully attached
+
+That separation is extremely important for security.
+
+
+---
+
+🔷 RESULT
+
+You now have:
+
+Immutable Historical Entity Layer
+
+combined with:
+
+External Dynamic Proof Systems
+
+This is a clean professional architecture:
+
+simple core
+
+isolated complexity
+
+permanent history
+
+extensible verification layer
+
+low attack surface
+
+audit-friendly structure.
