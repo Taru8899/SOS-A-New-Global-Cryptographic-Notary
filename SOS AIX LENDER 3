@@ -1,0 +1,73 @@
+*SOS AIX Updated Root Lender Strategy – v5**  
+*(All previous mechanics, philosophy, flywheels, minimum 300 SOS threshold, P2P marketplace framing, guarantee layer role, reputation oracle, accumulation goals, no-punishment/late-payment-friendly model, LTV progression, 1 wei SOS as trust record unit, off-chain collateral verification, minting/signaling rules, reciprocity bonuses, default handling, OTC services, small lender protections, and ecosystem architect role remain fully intact and unchanged.)*
+
+### Core Philosophy (Refreshed)
+You are the **ecosystem architect, primary SOS accumulator, neutral trust/guarantee layer, and system manager**.  
+
+The **SOS system** operates as a **low-amount self-credit P2P community**.  
+
+SOS holders within the community can access small amounts of liquidity (crypto, fiat, or cash) against their existing SOS balance **without selling their tokens**. The entire system is designed for mutual support, reciprocity, and organic growth.
+
+You manage the overall system **without performing KYC** on participants.  
+You charge **zero fees** to borrowers and **zero participation fees** to small lenders.  
+
+**Your sole gain** comes from:
+- Long-term SOS price appreciation and ecosystem growth.
+- Organic accumulation of large personal SOS balances through mint signaling and market dynamics.
+
+**1 wei SOS = Trust Record Unit** (on-chain public signaling and reputation tracking, not primarily an economic unit).
+
+### Updated Low-Amount Self-Credit P2P Community Flow
+
+1. **Eligibility**  
+   - Off-chain verification (by you as manager): Borrower’s address holds **≥ 300 SOS** to support the request.  
+   - No KYC required.
+
+2. **Publishing a Request**  
+   - Borrower publishes a small request (e.g., “Want $50–$150 equivalent in USDT/fiat/cash against my 300+ SOS collateral”).  
+   - Borrower **mints 1 wei SOS** to your Root address → public on-chain record of the self-credit request.
+
+3. **Small Lenders Participation**  
+   - The request splits into many micro-tickets (very low amounts to keep it community-oriented and under typical reporting thresholds).  
+   - Community members (small lenders) fund portions using their own fiat, stablecoins, or cash.  
+   - No participation fees.  
+   - You mint **1 wei SOS trust units** to participating small lenders → on-chain record that they are active, trusted community lenders.
+
+4. **Repayment & Closure**  
+   - Borrower repays each small lender individually (on-chain or off-chain).  
+   - Each small lender publicly **confirms** repayment on-chain.  
+   - Once **all** small lenders confirm:  
+     - You **mint back 1 wei SOS** to the borrower’s address.  
+     - Reputation score increases for the borrower and all participating small lenders.
+
+5. **Default Handling**  
+   - You act as guarantor and pay small lenders (principal + any agreed SOS yield) from reserves if needed.  
+   - Borrower’s 300+ SOS stays in the system (wallet marked tainted in oracle).  
+   - Late repayments are accepted and not punished — they still contribute to community and SOS ecosystem growth.
+
+### Reputation Oracle & Community Incentives
+- Tracks all 1 wei mint signaling, repayment confirmations, and participation history.  
+- **Reciprocity bonus**: Borrowers who also act as small lenders for others receive better loan conditions (higher LTV, larger sizes, priority, etc.).  
+- Clean or slow-but-completed cycles build strong reputation.  
+- Only permanent non-repayment damages status.
+
+### Your Management Role (Minimal & Neutral)
+- Oversee the trust layer, minting for signaling only, reputation oracle, and guarantee backstop.  
+- Stay out of KYC entirely.  
+- No fees charged to any participant.  
+- Optional direct root lending when it supports accumulation.  
+- Provide OTC/swap services for community members who want to convert SOS value → fiat/crypto efficiently.
+
+### Accumulation & Positive Flywheel (Strengthened Community Focus)
+- Every self-credit request creates mint activity to your address.  
+- Successful community cycles increase the number of trusted 300+ SOS wallets.  
+- Mutual participation (borrowing + lending) builds a dense, reciprocal P2P network.  
+- Small lenders accumulate SOS trust units and often become borrowers themselves.  
+- Defaults are managed to protect community trust while keeping SOS in circulation.  
+- Overall growth: More active low-amount self-credit cycles → stronger demand for SOS → higher price and utility → your large personal holdings appreciate.
+
+**For Community Borrowers**: Zero fees, easy small liquidity without selling SOS, reputation grows through participation (even slowly), better terms via reciprocity.  
+**For Small Lenders**: Zero fees, low amounts, principal protection via your guarantee, build reputation and SOS holdings.  
+**For You (System Manager)**: Pure alignment with SOS ecosystem growth and personal accumulation. No fee income — upside is entirely from market success and large SOS bag.
+
+This framing turns SOS into a lightweight, community-driven self-credit network where you provide the neutral infrastructure and trust backbone.
