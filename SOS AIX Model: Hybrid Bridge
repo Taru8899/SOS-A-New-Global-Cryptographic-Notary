@@ -1,0 +1,46 @@
+**Updated SOS AIX Model: Hybrid Bridge + Full Participation-Flow Economy**
+
+This update preserves the entire previous architecture while integrating the new mechanics.
+
+### Core Mechanics (Unchanged + Enhanced)
+- **Non-transferable participation ledger**: Balance = mint_in − mint_out.
+- Wealth = ongoing relational connectivity and participation capacity, not stored tokens.
+- Payment = creating a valid economic connection via mint interaction (reciprocal mint capacity), not asset transfer.
+- Gas (ETH) remains pure fuel/cost for computation, spam resistance, and network operations — never the primary value store.
+- **No traditional prices, transferable balances, passive accumulation, or easy speculation/hoarding.**
+
+### New Bridge & Logger Integration
+- **Logger contract + SOS token contract**: Enables seamless fiat onboarding and ETH bridging.
+  - Any fiat payment (or ETH) can trigger minting of **1 wei SOS** (or calibrated units). Each minted SOS unit carries attached metadata: **"how much was spent behind this mint"** (fiat/ETH value logged per interaction).
+  - This creates a **bridge**: ETH/fiat → SOS participation capacity. Users "migrate" value into the relational system without making SOS a fully transferable speculative token.
+  - **Hybrid mode**: Economy can run with ETH alongside SOS (ETH for gas + high-value transfers; SOS for relational flows) or transition to **full SOS replacement** (SOS ledger handles most economic signaling, ETH purely operational).
+  - Each user's SOS balance includes rich data on historical inflows — provenance of participation (e.g., "this capacity backed by X ETH/fiat equivalent from real-world contribution").
+
+This acts as a **migration tool**: gradual shift from pure ETH/crypto-native or fiat systems into the participation-flow model. Existing value enters via logged mints, then behavior shifts toward reciprocity.
+
+### Allocation for Scarcity (e.g., One Candy, Many Claimants)
+- **First-come, first-served** (priority by earliest valid mint connection or timestamped participation claim) as a baseline.
+- Augmented by relational factors: reputation, trust graph strength, contribution history, local consensus, or priority queues based on balance flow.
+- Still replaces pure monetary bidding with **relational allocation** — favors active, reciprocal participants over passive wealth.
+
+### Economic Drift Encouraged by the System
+- **From "work for salary" → creation of goods/services**: 
+  - Balances reward ongoing reciprocal mint flows. Passive income or salary extraction without value creation depletes capacity over time.
+  - Incentives tilt toward **producing real goods** (candy, services, innovations) that others willingly mint toward you, sustaining your participation. Hoarding or rent-seeking becomes self-limiting.
+  - Promotes entrepreneurship, mutual production, and circulation over wage dependency or extraction.
+
+### Philosophical & Social Parallels
+This model resonates with certain religious communal and reciprocal teachings, though implemented in a decentralized, ledger-based, voluntary way:
+
+- **Mormon (LDS) teachings**: Strong alignment with the **United Order / Law of Consecration**. Members consecrate (effectively "mint in") excess resources to a common pool/stewardship, then receive back according to needs/family circumstances while retaining private ownership and management. Emphasis on stewardship (responsible use of resources for the community), eliminating poverty through mutual support, tithing (10%+ giving), and "all things common" in ideal Zion societies (as in 4 Nephi). Wealth is seen as a trust from God — hoarding or pride in riches is warned against; circulation, welfare systems, and cooperative production are idealized. Your system mechanizes reciprocity and anti-hoarding via the balance mechanic, similar to moving from accumulation to participatory stewardship.
+
+- **Judaism**: Deep parallels with **Tzedakah** (righteousness/justice, not optional charity) and anti-usury rules within the community. Wealth is a stewardship; hoarding and arrogance from riches lead to spiritual forgetting of God. Strong emphasis on circulation — giving creates flow (shefa/abundance), highest forms of tzedakah include loans, partnerships, or providing work to make others self-sufficient (Maimonides' ladder). Prohibitions on interest between community members foster internal reciprocity. Your "payment as connection" and flow equilibrium echo these justice-oriented, anti-extraction principles without central religious authority.
+
+The SOS model is a **crypto-native, emergent version** of these: relational access and participation-flow instead of top-down consecration or mandated tithing, with cryptographic enforcement of circulation equilibrium.
+
+### Updated Unified Definition
+> **SOS AIX** is a gas-cost-backed (ETH as fuel only), non-transferable participation-flow ledger bridged to fiat/ETH via logger contracts. Balances (mint_in − mint_out) and attached spend metadata emerge from reciprocal mint relationships. Economic access and allocation arise from participation connectivity and first-come relational priority rather than transferable ownership or monetary bidding. It enables hybrid ETH/SOS use or full migration, drives circulation equilibrium, discourages speculation/hoarding, and incentivizes direct goods creation over extractive wage labor — embodying a participation economy philosophically akin to mutualist, gift, stewardship, and tzedakah systems.
+
+This remains a fundamental shift: **from ownership economy to participation-flow economy**. The bridge/logger addition makes it practical for real-world bootstrapping and gradual adoption while preserving the anti-exploitation core. Hard problems (sybil resistance, scaling relational allocation, dispute resolution) persist but are mitigated by metadata-rich logging and first-come mechanics. 
+
+This design continues to feel like a genuine innovation in economic coordination.
