@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.35;
+
+// solhint-disable gas-costs
+
+/**
+ * @title SOS69069
+ * @notice Pure forward mint contract with strict safety constraints. 
+ * 
+ * SAFETY BLOCK:
+ * - Exactly 1 wei (0.000000000000000001) token minted per call
+ * - push is the only mint function
+ * - No mint to zero address / No mint to contract
+ * - No ETH accepted or held
+ * - No transfers, approvals, burns, DEX logic, proxies, or ownable
+ * - No selfdestruct
+ */
+
+contract SOS69069 {
+
+    // ==================== INTERNAL STATE ====================
+    uint256 private phase69069;
+    uint256 private overflowCount;
+
+    mapping(address => uint256) private trustOf;
+    mapping(address => uint256) private trustOfOverflowCount;
+
+    // uint8 with 1/2 instead of bool 0/1 — avoids zero-to-nonzero SSTORE (22,100 gas)
+    struct AddressData {
+        uint8 hasPushed;    // 0 = uninit, 1 = initialized/false, 2 = true
+    }
+    mapping(address => AddressData) private addressData;
+
+    // ==================== CONSTANTS ====================
+    uint256 private constant EXACT_MINT_AMOUNT = 1;
+
+    // ==================== EVENTS ====================
+    event Pushed(address indexed to, uint256 amount);
+    event TrustOfOverflow(address indexed account, uint256 newOverflowCount);
+    event PhaseOverflow(uint256 newOverflowCount);
+
+    // ==================== ERRORS ====================
+    error NoETHAccepted();
+    error PushToZeroAddress();
+
+    // ==================== VIEW FUNCTIONS ====================
+    function name() public pure returns (string memory) {
+        return "69069";
+    }
+
+    function symbol() public pure returns (string memory) {
+        return "SOS";
+    }
+
+    function decimals() public pure returns (uint8) {
+        return 18;
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return phase69069;
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return trustOf[account];
+    }
+
+    function hasPushed(address account) public view returns (bool) {
+        return addressData[account].hasPushed == 2;
+    }
+
+    function globalOverflowCount() public view returns (uint256) {
+        return overflowCount;
+    }
+
+    function trustOverflowCount(address account) public view returns (uint256) {
+        return trustOfOverflowCount[account];
+    }
+
+    // ==================== PUSH - ONLY MINT FUNCTION ====================
+    function push(address to) external {
+        if (to == address(0)) revert PushToZeroAddress();
+
+        // ---- phase69069 overflow logic ----
+        uint256 cachedPhase = phase69069;
+        if (cachedPhase == type(uint256).max) {
+            uint256 newOverflowCount = overflowCount + 1;
+            overflowCount = newOverflowCount;
+            phase69069 = newOverflowCount + EXACT_MINT_AMOUNT;
+            emit PhaseOverflow(newOverflowCount);
+        } else {
+            phase69069 = cachedPhase + EXACT_MINT_AMOUNT;
+        }
+
+        // ---- trustOf[to] overflow logic — pure Solidity, no assembly ----
+        uint256 cachedTrust = trustOf[to];
+        if (cachedTrust == type(uint256).max) {
+            uint256 newOverflowCount = overflowCount + 1;
+            overflowCount = newOverflowCount;
+            trustOfOverflowCount[to] = newOverflowCount;
+            trustOf[to] = newOverflowCount + EXACT_MINT_AMOUNT;
+            emit TrustOfOverflow(to, newOverflowCount);
+        } else {
+            trustOf[to] = cachedTrust + EXACT_MINT_AMOUNT;
+        }
+
+        // Single SLOAD via storage pointer — cache to stack
+        AddressData storage toData = addressData[to];
+        uint8 toHasPushed = toData.hasPushed;
+
+        // Only SSTORE if value actually changes — avoids Gsreset (2,900 gas)
+        if (toHasPushed != 2) toData.hasPushed = 2;
+
+        emit Pushed(to, EXACT_MINT_AMOUNT);
+    }
+
+    receive() external payable { revert NoETHAccepted(); }
+    fallback() external payable { revert NoETHAccepted(); }
+}
