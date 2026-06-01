@@ -1,4 +1,3 @@
-```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.35;
 
@@ -153,4 +152,3 @@ contract SOS69069 {
     receive() external payable { revert NoETHAccepted(); }
     fallback() external payable { revert NoETHAccepted(); }
 }
-```
