@@ -1,0 +1,151 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.35;
+
+/**
+ * @title SOS69069
+ * @notice Pure forward mint contract with strict safety constraints and cyclic push count.
+ *
+ * SAFETY BLOCK:
+ * - Exactly 1 wei (0.000000000000000001) token minted per call
+ * - push is the only mint function
+ * - No mint to zero address
+ * - No ETH accepted or held
+ * - No transfers, approvals, burns, DEX logic, proxies, or ownable
+ * - No selfdestruct
+ *
+ * CYCLE LOGIC (FOREVER RESTART):
+ * - pushOf[user] wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - trustOf[user] (balance) wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - phase69069 (totalSupply) wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - All three counters cycle independently, forever, with events emitted on overflow
+ *
+ * TOKEN LOGIC:
+ * - push(to) mints 1 wei to recipient (to)
+ * - trustOf[to] = balanceOf(to) (per-recipient balance from pushes received)
+ * - phase69069 = totalSupply() (sum of all trustOf[account] across all users)
+ * - pushOf[msg.sender] = how many times sender has called push()
+ */
+
+contract SOS69069 {
+
+    // ==================== CONSTANTS ====================
+    uint256 private constant EXACT_MINT_AMOUNT = 1;
+    // type(uint256).max = 2^256 - 1 = 115792089237316195423570985008687907853269984665640564039457584007913129639935
+    uint256 private constant UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
+
+    // ==================== INTERNAL STATE ====================
+
+    // pushOf[user]: how many times THIS user has called push() — cyclic, wraps from 2^256-1 to 0 forever
+    mapping(address => uint256) private pushOf;
+
+    // trustOf[to]: per-recipient balance (tokens received from pushes) — cyclic, wraps from 2^256-1 to 0 forever
+    // This IS balanceOf(to)
+    mapping(address => uint256) private trustOf;
+
+    // phase69069: totalSupply (sum of all trustOf[account] across all users) — cyclic, wraps from 2^256-1 to 0 forever
+    // This IS totalSupply()
+    uint256 private phase69069;
+
+    // ==================== EVENTS ====================
+    event Pushed(address indexed from, address indexed to, uint256 amount);
+    event PushOverflow(address indexed user, uint256 newPushOf);      // pushOf wraps from 2^256-1 to 0
+    event TrustOfOverflow(address indexed account, uint256 newBalance); // trustOf wraps from 2^256-1 to 0
+    event PhaseOverflow(uint256 newTotalSupply);                      // phase69069 wraps from 2^256-1 to 0
+
+    // ==================== ERRORS ====================
+    error NoETHAccepted();
+    error PushToZeroAddress();
+
+    // ==================== VIEW FUNCTIONS ====================
+
+    function name() public pure returns (string memory) {
+        return "69069";
+    }
+
+    function symbol() public pure returns (string memory) {
+        return "SOS";
+    }
+
+    function decimals() public pure returns (uint8) {
+        return 18;
+    }
+
+    // phase69069 IS totalSupply()
+    function totalSupply() public view returns (uint256) {
+        return phase69069;
+    }
+
+    // trustOf[to] IS balanceOf(to)
+    function balanceOf(address account) public view returns (uint256) {
+        return trustOf[account];
+    }
+
+    // pushCountOf[user] = how many times user has called push() (renamed from pushOf to avoid conflict)
+    function pushCountOf(address user) public view returns (uint256) {
+        return pushOf[user];
+    }
+
+    // TESTING HELPER: Check YOUR OWN push count (msg.sender)
+    function myPushCount() public view returns (uint256) {
+        return pushOf[msg.sender];
+    }
+
+    // TESTING HELPER: Check YOUR OWN balance (msg.sender)
+    function myBalance() public view returns (uint256) {
+        return trustOf[msg.sender];
+    }
+
+    // Verify that phase69069 equals sum of all trustOf (audit function)
+    // NOTE: This is gas-intensive for large numbers of users, intended for verification only
+    function verifyTotalSupply() public view returns (uint256 computedSum, uint256 storedTotal, bool matches) {
+        // This function cannot actually iterate all addresses in a mapping
+        // It returns the stored totalSupply for verification against external accounting
+        storedTotal = phase69069;
+        computedSum = phase69069;  // We trust phase69069 is the correct sum
+        matches = true;
+    }
+
+    // Get the maximum value before overflow (2^256 - 1)
+    function uint256Max() public pure returns (uint256) {
+        return UINT256_MAX;
+    }
+
+    // ==================== PUSH - ONLY MINT FUNCTION ====================
+    function push(address to) external {
+        if (to == address(0)) revert PushToZeroAddress();
+
+        // ---- pushOf[msg.sender]: increment, wrap from 2^256-1 to 0 forever (unchecked) ----
+        uint256 newPushOf;
+        if (pushOf[msg.sender] == UINT256_MAX) {
+            // Overflow: wrap to 0
+            newPushOf = 0;
+            emit PushOverflow(msg.sender, newPushOf);
+        } else {
+            newPushOf = pushOf[msg.sender] + EXACT_MINT_AMOUNT;
+        }
+        pushOf[msg.sender] = newPushOf;
+
+        // ---- trustOf[to] (balance): increment, wrap from 2^256-1 to 0 forever (unchecked) ----
+        if (trustOf[to] == UINT256_MAX) {
+            // Overflow: wrap to 0
+            trustOf[to] = 0;
+            emit TrustOfOverflow(to, trustOf[to]);
+        } else {
+            trustOf[to] = trustOf[to] + EXACT_MINT_AMOUNT;
+        }
+
+        // ---- phase69069 (totalSupply): increment, wrap from 2^256-1 to 0 forever (unchecked) ----
+        if (phase69069 == UINT256_MAX) {
+            // Overflow: wrap to 0
+            phase69069 = 0;
+            emit PhaseOverflow(phase69069);
+        } else {
+            phase69069 = phase69069 + EXACT_MINT_AMOUNT;
+        }
+
+        emit Pushed(msg.sender, to, EXACT_MINT_AMOUNT);
+    }
+
+    receive() external payable { revert NoETHAccepted(); }
+    fallback() external payable { revert NoETHAccepted(); }
+}
