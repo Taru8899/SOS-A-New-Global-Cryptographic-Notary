@@ -1,0 +1,156 @@
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.35;
+
+/**
+ * @title SOS69069
+ * @notice Pure forward mint contract with strict safety constraints and cyclic push count.
+ *
+ * SAFETY BLOCK:
+ * - Exactly 1 wei (0.000000000000000001) token minted per call
+ * - push is the only mint function
+ * - No mint to zero address
+ * - No ETH accepted or held
+ * - No transfers, approvals, burns, DEX logic, proxies, or ownable
+ * - No selfdestruct
+ *
+ * CYCLE LOGIC (FOREVER RESTART):
+ * - pushOf[user] wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - trustOf[user] (balance) wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - phase69069 (totalSupply) wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - All three counters cycle independently, forever, with events emitted on overflow
+ *
+ * TOKEN LOGIC:
+ * - push(to) mints 1 wei to recipient (to)
+ * - trustOf[to] = balanceOf(to) (per-recipient balance from pushes received)
+ * - phase69069 = totalSupply() (cyclic mint counter — NOT a guaranteed live sum of all
+ *   balances; diverges from the real sum after any TrustOfOverflow event since each
+ *   counter wraps independently. Use off-chain event indexing for the true balance sum.)
+ * - pushOf[msg.sender] = how many times sender has called push()
+ *
+ * SELF-PUSH:
+ * - push(msg.sender) is permitted. A caller may mint to themselves, incrementing
+ *   both their own balance (trustOf) and their push count (pushOf). This is intentional.
+ */
+
+contract SOS69069 {
+
+    // ==================== CONSTANTS ====================
+    uint256 private constant EXACT_MINT_AMOUNT = 1;
+    uint256 private constant UINT256_MAX = type(uint256).max; // 2^256 - 1
+
+    // ==================== INTERNAL STATE ====================
+
+    // pushOf[user]: how many times THIS user has called push() — cyclic, wraps from 2^256-1 to 0 forever
+    mapping(address => uint256) private pushOf;
+
+    // trustOf[to]: per-recipient balance (tokens received from pushes) — cyclic, wraps from 2^256-1 to 0 forever
+    // This IS balanceOf(to)
+    mapping(address => uint256) private trustOf;
+
+    // phase69069: totalSupply (sum of all trustOf[account] across all users) — cyclic, wraps from 2^256-1 to 0 forever
+    // This IS totalSupply()
+    uint256 private phase69069;
+
+    // ==================== EVENTS ====================
+    event Pushed(address indexed from, address indexed to, uint256 amount);
+    event PushOverflow(address indexed user, uint256 prevPushOf);       // emits value at wrap (UINT256_MAX), counter resets to 0
+    event TrustOfOverflow(address indexed account, uint256 prevBalance); // emits value at wrap (UINT256_MAX), counter resets to 0
+    event PhaseOverflow(uint256 prevTotalSupply);                        // emits value at wrap (UINT256_MAX), counter resets to 0
+
+    // ==================== ERRORS ====================
+    error NoETHAccepted();
+    error PushToZeroAddress();
+
+    // ==================== VIEW FUNCTIONS ====================
+
+    function name() public pure returns (string memory) {
+        return "69069";
+    }
+
+    function symbol() public pure returns (string memory) {
+        return "SOS";
+    }
+
+    function decimals() public pure returns (uint8) {
+        return 18;
+    }
+
+    // phase69069 IS totalSupply() — cyclic mint counter, not a guaranteed sum of all balances
+    function totalSupply() public view returns (uint256) {
+        return phase69069;
+    }
+
+    // trustOf[to] IS balanceOf(to)
+    function balanceOf(address account) public view returns (uint256) {
+        return trustOf[account];
+    }
+
+    // pushCountOf[user] = how many times user has called push() (renamed from pushOf to avoid conflict)
+    function pushCountOf(address user) public view returns (uint256) {
+        return pushOf[user];
+    }
+
+    // TESTING HELPER: Check YOUR OWN push count (msg.sender)
+    function myPushCount() public view returns (uint256) {
+        return pushOf[msg.sender];
+    }
+
+    // TESTING HELPER: Check YOUR OWN balance (msg.sender)
+    function myBalance() public view returns (uint256) {
+        return trustOf[msg.sender];
+    }
+
+    // Returns the stored totalSupply for off-chain verification.
+    // NOTE: Solidity mappings are not iterable — the actual sum of all trustOf[account]
+    // values cannot be computed on-chain. Use off-chain indexing (e.g. via Pushed,
+    // TrustOfOverflow events) to independently verify this value matches the real sum.
+    function verifyTotalSupply() public view returns (uint256 storedTotal) {
+        storedTotal = phase69069;
+    }
+
+    // Get the maximum value before overflow (2^256 - 1)
+    function uint256Max() public pure returns (uint256) {
+        return type(uint256).max;
+    }
+
+    // ==================== PUSH - ONLY MINT FUNCTION ====================
+    function push(address to) external {
+        if (to == address(0)) revert PushToZeroAddress();
+
+        // Cache storage reads — avoids duplicate SLOADs (~300 gas saved per call)
+        uint256 currentPush  = pushOf[msg.sender];
+        uint256 currentTrust = trustOf[to];
+        uint256 currentPhase = phase69069;
+
+        // ---- pushOf[msg.sender]: increment, wrap from 2^256-1 to 0 forever ----
+        if (currentPush == UINT256_MAX) {
+            emit PushOverflow(msg.sender, UINT256_MAX);
+            pushOf[msg.sender] = 0;
+        } else {
+            pushOf[msg.sender] = currentPush + EXACT_MINT_AMOUNT;
+        }
+
+        // ---- trustOf[to] (balance): increment, wrap from 2^256-1 to 0 forever ----
+        if (currentTrust == UINT256_MAX) {
+            emit TrustOfOverflow(to, UINT256_MAX);
+            trustOf[to] = 0;
+        } else {
+            trustOf[to] = currentTrust + EXACT_MINT_AMOUNT;
+        }
+
+        // ---- phase69069 (totalSupply): increment, wrap from 2^256-1 to 0 forever ----
+        if (currentPhase == UINT256_MAX) {
+            emit PhaseOverflow(UINT256_MAX);
+            phase69069 = 0;
+        } else {
+            phase69069 = currentPhase + EXACT_MINT_AMOUNT;
+        }
+
+        emit Pushed(msg.sender, to, EXACT_MINT_AMOUNT);
+    }
+
+    receive() external payable { revert NoETHAccepted(); }
+    fallback() external payable { revert NoETHAccepted(); }
+}
+```
