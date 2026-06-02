@@ -1,3 +1,201 @@
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.35;
+
+/**
+ * @title SOS69069
+ * @notice Pure forward mint contract with strict safety constraints and cyclic push count.
+ *
+ * SAFETY BLOCK:
+ * - Exactly 1 wei (0.000000000000000001) token minted per call
+ * - push is the only mint function
+ * - No mint to zero address
+ * - No ETH accepted or held
+ * - No transfers, approvals, burns, DEX logic, proxies, or ownable
+ * - No selfdestruct
+ *
+ * CYCLE LOGIC (FOREVER RESTART):
+ * - pushOf[user] wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - trustOf[user] (balance) wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - phase69069 (totalSupply) wraps from type(uint256).max (2^256 - 1) to 0 forever (unchecked)
+ * - All three counters cycle independently, forever, with events emitted on overflow
+ *
+ * TOKEN LOGIC:
+ * - push(to) mints 1 wei to recipient (to)
+ * - trustOf[to] = balanceOf(to) (per-recipient balance from pushes received)
+ * - phase69069 = totalSupply() (cyclic mint counter — NOT a guaranteed live sum of all
+ *   balances; diverges from the real sum after any TrustOfOverflow event since each
+ *   counter wraps independently. Use off-chain event indexing for the true balance sum.)
+ * - pushOf[msg.sender] = how many times sender has called push()
+ *
+ * SELF-PUSH:
+ * - push(msg.sender) is permitted. A caller may mint to themselves, incrementing
+ *   both their own balance (trustOf) and their push count (pushOf). This is intentional.
+ *
+ * ACTIVATION GRANT:
+ * - Every address starts at balance 0.000000000000000000
+ * - On first push() sent, the caller receives a one-time identity grant:
+ *   trustOf[msg.sender] = 1.000000000000999999 (START_BALANCE = 1000000000000999999)
+ * - Contribution → Identity Grant → Accumulation
+ * - The grant fires exactly once per address, guarded by activated[msg.sender]
+ * - activated is never reset — overflow of trustOf does NOT re-trigger the grant
+ */
+
+contract SOS69069 {
+
+    // ==================== CONSTANTS ====================
+    uint256 private constant EXACT_MINT_AMOUNT = 1;
+    uint256 private constant UINT256_MAX = type(uint256).max; // 2^256 - 1
+
+    // One-time identity grant awarded to msg.sender on their very first push()
+    // Represents 1.000000000000999999 in 18-decimal fixed-point
+    uint256 private constant START_BALANCE = 1000000000000999999;
+
+    // ==================== INTERNAL STATE ====================
+
+    // pushOf[user]: how many times THIS user has called push() — cyclic, wraps from 2^256-1 to 0 forever
+    mapping(address => uint256) private pushOf;
+
+    // trustOf[to]: per-recipient balance (tokens received from pushes) — cyclic, wraps from 2^256-1 to 0 forever
+    // This IS balanceOf(to)
+    mapping(address => uint256) private trustOf;
+
+    // phase69069: totalSupply (sum of all trustOf[account] across all users) — cyclic, wraps from 2^256-1 to 0 forever
+    // This IS totalSupply()
+    uint256 private phase69069;
+
+    // activated[user]: permanently true after first push() — guards the one-time identity grant
+    // Never reset, even after trustOf overflow
+    mapping(address => bool) private activated;
+
+    // ==================== EVENTS ====================
+    event Pushed(address indexed from, address indexed to, uint256 amount);
+
+    // === Hybrid Visibility Layer (Fake ERC-20 compatibility) ===
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    event PushOverflow(address indexed user, uint256 prevPushOf);        // emits value at wrap (UINT256_MAX), counter resets to 0
+    event TrustOfOverflow(address indexed account, uint256 prevBalance); // emits value at wrap (UINT256_MAX), counter resets to 0
+    event PhaseOverflow(uint256 prevTotalSupply);                        // emits value at wrap (UINT256_MAX), counter resets to 0
+
+    // Emitted exactly once per address when their identity grant is applied
+    event Activated(address indexed user, uint256 grantAmount);
+
+    // ==================== ERRORS ====================
+    error NoETHAccepted();
+    error PushToZeroAddress();
+
+    // ==================== VIEW FUNCTIONS ====================
+
+    function name() public pure returns (string memory) {
+        return "69069";
+    }
+
+    function symbol() public pure returns (string memory) {
+        return "SOS";
+    }
+
+    function decimals() public pure returns (uint8) {
+        return 18;
+    }
+
+    // phase69069 IS totalSupply() — cyclic mint counter, not a guaranteed sum of all balances
+    function totalSupply() public view returns (uint256) {
+        return phase69069;
+    }
+
+    // trustOf[to] IS balanceOf(to)
+    function balanceOf(address account) public view returns (uint256) {
+        return trustOf[account];
+    }
+
+    // pushCountOf[user] = how many times user has called push()
+    function pushCountOf(address user) public view returns (uint256) {
+        return pushOf[user];
+    }
+
+    // TESTING HELPER: Check YOUR OWN push count (msg.sender)
+    function myPushCount() public view returns (uint256) {
+        return pushOf[msg.sender];
+    }
+
+    // TESTING HELPER: Check YOUR OWN balance (msg.sender)
+    function myBalance() public view returns (uint256) {
+        return trustOf[msg.sender];
+    }
+
+    // Returns true if address has sent their first push and received the identity grant
+    // Stays true forever — overflow of trustOf does NOT reset this
+    function isActivated(address user) public view returns (bool) {
+        return activated[user];
+    }
+
+    // Returns the stored totalSupply for off-chain verification.
+    // NOTE: Solidity mappings are not iterable — the actual sum of all trustOf[account]
+    // values cannot be computed on-chain. Use off-chain indexing (e.g. via Pushed,
+    // TrustOfOverflow events) to independently verify this value matches the real sum.
+    function verifyTotalSupply() public view returns (uint256 storedTotal) {
+        storedTotal = phase69069;
+    }
+
+    // Get the maximum value before overflow (2^256 - 1)
+    function uint256Max() public pure returns (uint256) {
+        return type(uint256).max;
+    }
+
+    // ==================== PUSH - ONLY MINT FUNCTION ====================
+    function push(address to) external {
+        if (to == address(0)) revert PushToZeroAddress();
+
+        // ---- ACTIVATION GRANT: one-time identity balance for msg.sender on first push ----
+        // activated[msg.sender] is set to true permanently here and never cleared,
+        // so this block executes exactly once per address regardless of overflow resets.
+        if (!activated[msg.sender]) {
+            activated[msg.sender] = true;
+            trustOf[msg.sender] = START_BALANCE;
+            emit Activated(msg.sender, START_BALANCE);
+        }
+
+        // Cache storage reads — avoids duplicate SLOADs (~300 gas saved per call)
+        uint256 currentPush  = pushOf[msg.sender];
+        uint256 currentTrust = trustOf[to];
+        uint256 currentPhase = phase69069;
+
+        // ---- pushOf[msg.sender]: increment, wrap from 2^256-1 to 0 forever ----
+        if (currentPush == UINT256_MAX) {
+            emit PushOverflow(msg.sender, UINT256_MAX);
+            pushOf[msg.sender] = 0;
+        } else {
+            pushOf[msg.sender] = currentPush + EXACT_MINT_AMOUNT;
+        }
+
+        // ---- trustOf[to] (balance): increment, wrap from 2^256-1 to 0 forever ----
+        if (currentTrust == UINT256_MAX) {
+            emit TrustOfOverflow(to, UINT256_MAX);
+            trustOf[to] = 0;
+        } else {
+            trustOf[to] = currentTrust + EXACT_MINT_AMOUNT;
+        }
+
+        // ---- phase69069 (totalSupply): increment, wrap from 2^256-1 to 0 forever ----
+        if (currentPhase == UINT256_MAX) {
+            emit PhaseOverflow(UINT256_MAX);
+            phase69069 = 0;
+        } else {
+            phase69069 = currentPhase + EXACT_MINT_AMOUNT;
+        }
+
+        emit Pushed(msg.sender, to, EXACT_MINT_AMOUNT);
+
+        // Hybrid visibility layer — tricks wallets/explorers into showing the token
+        emit Transfer(msg.sender, to, EXACT_MINT_AMOUNT);
+    }
+
+    receive() external payable { revert NoETHAccepted(); }
+    fallback() external payable { revert NoETHAccepted(); }
+}
+https://etherscan.io/tx/0x047286ac21c3b9d5e3056e417be6dd5d59c77f3f326174ab493e846ad0f0a7ea
+
 https://etherscan.io/token/0x46d0c90B978b657775655f36619653c02106c3A0
 
 
@@ -15,7 +213,8 @@ https://etherscan.io/address/0xda35e03628d225d36cfed135241b9f5167ed719e
 6080604052348015600e575f5ffd5b50610b238061001c5f395ff3fe60806040526004361061009f575f3560e01c806389b09de71161006357806389b09de7146101ec57806395d89b4114610214578063bc44de111461023e578063c9116b6914610268578063cf8400ce14610292578063dd97a01b146102ce576100d6565b806306fdde031461010857806318160ddd14610132578063313ce5671461015c5780634478c8bb1461018657806370a08231146101b0576100d6565b366100d6576040517fcc30be8000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6040517fcc30be8000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b348015610113575f5ffd5b5061011c6102f8565b604051610129919061097f565b60405180910390f35b34801561013d575f5ffd5b50610146610335565b60405161015391906109b7565b60405180910390f35b348015610167575f5ffd5b5061017061033e565b60405161017d91906109eb565b60405180910390f35b348015610191575f5ffd5b5061019a610346565b6040516101a791906109b7565b60405180910390f35b3480156101bb575f5ffd5b506101d660048036038101906101d19190610a62565b610389565b6040516101e391906109b7565b60405180910390f35b3480156101f7575f5ffd5b50610212600480360381019061020d9190610a62565b6103cf565b005b34801561021f575f5ffd5b50610228610819565b604051610235919061097f565b60405180910390f35b348015610249575f5ffd5b50610252610856565b60405161025f91906109b7565b60405180910390f35b348015610273575f5ffd5b5061027c61085f565b60405161028991906109b7565b60405180910390f35b34801561029d575f5ffd5b506102b860048036038101906102b39190610a62565b6108a3565b6040516102c591906109b7565b60405180910390f35b3480156102d9575f5ffd5b506102e26108e8565b6040516102ef91906109b7565b60405180910390f35b60606040518060400160405280600581526020017f3639303639000000000000000000000000000000000000000000000000000000815250905090565b5f600254905090565b5f6012905090565b5f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f2054905090565b5f60015f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff1603610434576040517fb46d05cd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b5f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205490505f60015f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205490505f60025490507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8303610596573373ffffffffffffffffffffffffffffffffffffffff167f5892f9e72b38da20e7c1448a35d447d1a6e24bcca9e69334e7f1aa8ce1112daf7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161054891906109b7565b60405180910390a25f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055506105e4565b6001836105a39190610aba565b5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055505b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036106c0578373ffffffffffffffffffffffffffffffffffffffff167f5ab6f950e1bb00a44ce4a2b5e1f0756d2369b6e78263ca326858855ec126eb2b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161067191906109b7565b60405180910390a25f60015f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f208190555061070f565b6001826106cd9190610aba565b60015f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055505b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8103610799577fcc00265a97766f7a6fff38e42a0d1efd92aef07ec4af9c551b0762d5c56d14437fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161078591906109b7565b60405180910390a15f6002819055506107ad565b6001816107a69190610aba565b6002819055505b8373ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff167f309b6ff7c796d92b2e93ed2e36f9e0a60c6f15ad0baea02f68da16974159af53600160405161080b91906109b7565b60405180910390a350505050565b60606040518060400160405280600381526020017f534f530000000000000000000000000000000000000000000000000000000000815250905090565b5f600254905090565b5f60015f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f2054905090565b5f5f5f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff905090565b5f81519050919050565b5f82825260208201905092915050565b8281835e5f83830152505050565b5f601f19601f8301169050919050565b5f6109518261090f565b61095b8185610919565b935061096b818560208601610929565b61097481610937565b840191505092915050565b5f6020820190508181035f8301526109978184610947565b905092915050565b5f819050919050565b6109b18161099f565b82525050565b5f6020820190506109ca5f8301846109a8565b92915050565b5f60ff82169050919050565b6109e5816109d0565b82525050565b5f6020820190506109fe5f8301846109dc565b92915050565b5f5ffd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f610a3182610a08565b9050919050565b610a4181610a27565b8114610a4b575f5ffd5b50565b5f81359050610a5c81610a38565b92915050565b5f60208284031215610a7757610a76610a04565b5b5f610a8484828501610a4e565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f610ac48261099f565b9150610acf8361099f565b9250828201905080821115610ae757610ae6610a8d565b5b9291505056fea2646970667358221220d79adb96df7a496e1978e3e38a14e8f6025574c6696e683321270c23ebcb5f7164736f6c63430008230033
 
 
-0x60806040526004361061009f575f3560e01c806389b09de71161006357806389b09de7146101ec57806395d89b4114610214578063bc44de111461023e578063c9116b6914610268578063cf8400ce14610292578063dd97a01b146102ce576100d6565b806306fdde031461010857806318160ddd14610132578063313ce5671461015c5780634478c8bb1461018657806370a08231146101b0576100d6565b366100d6576040517fcc30be8000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6040517fcc30be8000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b348015610113575f5ffd5b5061011c6102f8565b604051610129919061097f565b60405180910390f35b34801561013d575f5ffd5b50610146610335565b60405161015391906109b7565b60405180910390f35b348015610167575f5ffd5b5061017061033e565b60405161017d91906109eb565b60405180910390f35b348015610191575f5ffd5b5061019a610346565b6040516101a791906109b7565b60405180910390f35b3480156101bb575f5ffd5b506101d660048036038101906101d19190610a62565b610389565b6040516101e391906109b7565b60405180910390f35b3480156101f7575f5ffd5b50610212600480360381019061020d9190610a62565b6103cf565b005b34801561021f575f5ffd5b50610228610819565b604051610235919061097f565b60405180910390f35b348015610249575f5ffd5b50610252610856565b60405161025f91906109b7565b60405180910390f35b348015610273575f5ffd5b5061027c61085f565b60405161028991906109b7565b60405180910390f35b34801561029d575f5ffd5b506102b860048036038101906102b39190610a62565b6108a3565b6040516102c591906109b7565b60405180910390f35b3480156102d9575f5ffd5b506102e26108e8565b6040516102ef91906109b7565b60405180910390f35b60606040518060400160405280600581526020017f3639303639000000000000000000000000000000000000000000000000000000815250905090565b5f600254905090565b5f6012905090565b5f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f2054905090565b5f60015f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff1603610434576040517fb46d05cd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b5f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205490505f60015f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205490505f60025490507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8303610596573373ffffffffffffffffffffffffffffffffffffffff167f5892f9e72b38da20e7c1448a35d447d1a6e24bcca9e69334e7f1aa8ce1112daf7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161054891906109b7565b60405180910390a25f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055506105e4565b6001836105a39190610aba565b5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055505b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036106c0578373ffffffffffffffffffffffffffffffffffffffff167f5ab6f950e1bb00a44ce4a2b5e1f0756d2369b6e78263ca326858855ec126eb2b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161067191906109b7565b60405180910390a25f60015f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f208190555061070f565b6001826106cd9190610aba565b60015f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055505b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8103610799577fcc00265a97766f7a6fff38e42a0d1efd92aef07ec4af9c551b0762d5c56d14437fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161078591906109b7565b60405180910390a15f6002819055506107ad565b6001816107a69190610aba565b6002819055505b8373ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff167f309b6ff7c796d92b2e93ed2e36f9e0a60c6f15ad0baea02f68da16974159af53600160405161080b91906109b7565b60405180910390a350505050565b60606040518060400160405280600381526020017f534f530000000000000000000000000000000000000000000000000000000000815250905090565b5f600254905090565b5f60015f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f2054905090565b5f5f5f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff905090565b5f81519050919050565b5f82825260208201905092915050565b8281835e5f83830152505050565b5f601f19601f8301169050919050565b5f6109518261090f565b61095b8185610919565b935061096b818560208601610929565b61097481610937565b840191505092915050565b5f6020820190508181035f8301526109978184610947565b905092915050565b5f819050919050565b6109b18161099f565b82525050565b5f6020820190506109ca5f8301846109a8565b92915050565b5f60ff82169050919050565b6109e5816109d0565b82525050565b5f6020820190506109fe5f8301846109dc565b92915050565b5f5ffd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f610a3182610a08565b9050919050565b610a4181610a27565b8114610a4b575f5ffd5b50565b5f81359050610a5c81610a38565b92915050565b5f60208284031215610a7757610a76610a04565b5b5f610a8484828501610a4e565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f610ac48261099f565b9150610acf8361099f565b9250828201905080821115610ae757610ae6610a8d565b5b9291505056fea2646970667358221220d79adb96df7a496e1978e3e38a14e8f6025574c6696e683321270c23ebcb5f7164736f6c63430008230033
+0x60806040526004361061009f575f3560e01c806389b09de71161006357806389b09de7146101ec57806395d89b4114610214578063bc44de111461023e578063c9116b6914610268578063cf8400ce14610292578063dd97a01b146102ce576100d6565b806306fdde031461010857806318160ddd14610132578063313ce5671461015c5780634478c8bb1461018657806370a08231146101b0576100d6565b366100d6576040517fcc30be8000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6040517fcc30be8000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b348015610113575f5ffd5b5061011c6102f8565b604051610129919061097f565b60405180910390f35b34801561013d575f5ffd5b50610146610335565b60405161015391906109b7565b60405180910390f35b348015610167575f5ffd5b5061017061033e565b60405161017d91906109eb565b60405180910390f35b348015610191575f5ffd5b5061019a610346565b6040516101a791906109b7565b60405180910390f35b3480156101bb575f5ffd5b506101d660048036038101906101d19190610a62565b610389565b6040516101e391906109b7565b60405180910390f35b3480156101f7575f5ffd5b50610212600480360381019061020d9190610a62565b6103cf565b005b34801561021f575f5ffd5b50610228610819565b604051610235919061097f565b60405180910390f35b348015610249575f5ffd5b50610252610856565b60405161025f91906109b7565b60405180910390f35b348015610273575f5ffd5b5061027c61085f565b60405161028991906109b7565b60405180910390f35b34801561029d575f5ffd5b506102b860048036038101906102
+b39190610a62565b6108a3565b6040516102c591906109b7565b60405180910390f35b3480156102d9575f5ffd5b506102e26108e8565b6040516102ef91906109b7565b60405180910390f35b60606040518060400160405280600581526020017f3639303639000000000000000000000000000000000000000000000000000000815250905090565b5f600254905090565b5f6012905090565b5f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f2054905090565b5f60015f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff1603610434576040517fb46d05cd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b5f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205490505f60015f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205490505f60025490507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8303610596573373ffffffffffffffffffffffffffffffffffffffff167f5892f9e72b38da20e7c1448a35d447d1a6e24bcca9e69334e7f1aa8ce1112daf7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161054891906109b7565b60405180910390a25f5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055506105e4565b6001836105a39190610aba565b5f5f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055505b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036106c0578373ffffffffffffffffffffffffffffffffffffffff167f5ab6f950e1bb00a44ce4a2b5e1f0756d2369b6e78263ca326858855ec126eb2b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161067191906109b7565b60405180910390a25f60015f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f208190555061070f565b6001826106cd9190610aba565b60015f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055505b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8103610799577fcc00265a97766f7a6fff38e42a0d1efd92aef07ec4af9c551b0762d5c56d14437fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60405161078591906109b7565b60405180910390a15f6002819055506107ad565b6001816107a69190610aba565b6002819055505b8373ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff167f309b6ff7c796d92b2e93ed2e36f9e0a60c6f15ad0baea02f68da16974159af53600160405161080b91906109b7565b60405180910390a350505050565b60606040518060400160405280600381526020017f534f530000000000000000000000000000000000000000000000000000000000815250905090565b5f600254905090565b5f60015f3373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f2054905090565b5f5f5f8373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20549050919050565b5f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff905090565b5f81519050919050565b5f82825260208201905092915050565b8281835e5f83830152505050565b5f601f19601f8301169050919050565b5f6109518261090f565b61095b8185610919565b935061096b818560208601610929565b61097481610937565b840191505092915050565b5f6020820190508181035f8301526109978184610947565b905092915050565b5f819050919050565b6109b18161099f565b82525050565b5f6020820190506109ca5f8301846109a8565b92915050565b5f60ff82169050919050565b6109e5816109d0565b82525050565b5f6020820190506109fe5f8301846109dc565b92915050565b5f5ffd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f610a3182610a08565b9050919050565b610a4181610a27565b8114610a4b575f5ffd5b50565b5f81359050610a5c81610a38565b92915050565b5f60208284031215610a7757610a76610a04565b5b5f610a8484828501610a4e565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f610ac48261099f565b9150610acf8361099f565b9250828201905080821115610ae757610ae6610a8d565b5b9291505056fea2646970667358221220d79adb96df7a496e1978e3e38a14e8f6025574c6696e683321270c23ebcb5f7164736f6c63430008230033
 
 1538:4848:0:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;6304:15;;;;;;;;;;;;;;1538:4848;6365:15;;;;;;;;;;;;;;3087:85
 
