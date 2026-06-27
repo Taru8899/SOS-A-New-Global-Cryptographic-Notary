@@ -7,6 +7,51 @@ https://etherscan.io/token/0xfc73de8e3fc5a878c5e9035f3d27463a825a5983
 ipfs://4f420efce56bfd6041c84600686decc7e32369e1c64b319f31119207658a6767
 
 
+**SOS69069 as an Economic Token**
+
+The contract has two counters per address: `trustOf` (pushes received) and `pushOf` (pushes sent). Their difference is your balance:
+
+> **trustOf − pushOf = spending power**
+
+---
+
+**Earning**
+Someone calls `push(yourAddress)` — your `trustOf` rises. You gained 1 unit of purchasing power.
+
+**Spending**
+You call `push(merchantAddress)` — your `pushOf` rises. You spent 1 unit.
+
+**Your balance at any moment:**
+`balanceOf(you) − pushCountOf(you)`
+
+Both functions are public and readable by anyone on-chain, no wrapper needed.
+
+---
+
+**Why it works**
+
+You can only spend what others have given you. Wealth accumulates exclusively through other people choosing to push to your address — not through buying on a market. Spending is simultaneously minting to the recipient, so value moves forward through the network one push at a time.
+
+**Overspending** is visible on-chain to anyone checking both counters before accepting payment. Social enforcement replaces contract enforcement.
+
+---
+
+**What this creates**
+
+A currency where purchasing power is purely a measure of trust received from others. Wealth cannot be bought, only earned. The economy and the social graph are the same thing.
+
+---
+
+**Eternal by Design**
+
+All three counters — `trustOf`, `pushOf`, and `phase69069` — cycle from `2^256 − 1` back to `0` forever. When any counter overflows, the contract emits an event: `TrustOfOverflow`, `PushOverflow`, or `PhaseOverflow`.
+
+These events are permanent, immutable records on the blockchain. Any observer can index them off-chain to reconstruct the true cumulative history of every address across every cycle.
+
+This means the token has no ceiling, no expiry, and no end state. An address that has cycled through overflow is not reset — it has a richer on-chain history than one that hasn't. The economy can run for as long as Ethereum exists, across as many cycles as participation demands, with every push of every cycle permanently recorded and verifiable forever.
+
+
+
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
