@@ -1,0 +1,184 @@
+Here's a clearer, more structured rewrite that preserves all of the original mechanics and concepts.
+
+SOS Wallet — How It Works (Built on the SOS69069 Protocol)
+
+The SOS Wallet is not a traditional cryptocurrency wallet. It is a mint-based ledger that uses the on-chain SOS69069 contract as its protocol and only source of truth.
+
+Every balance, every transfer-like interaction, and every recovery operation is expressed exclusively through mint events ("pushTo"). Nothing can be modified, censored, reversed, or seized because the protocol stores only a permanent, append-only history of these mint events.
+
+---
+
+Core Protocol Mechanics
+
+The SOS69069 contract defines only a single value-bearing operation:
+
+- "pushTo(address to)"
+- "pushForMe()" (a convenience function)
+
+Each successful call permanently mints exactly 1 SOS.
+
+The protocol maintains three primary counters:
+
+- trustOf[address] — Total number of times the address has been the recipient of a push. This is the value displayed by "balanceOf()".
+- pushOf[address] — Total number of pushes initiated by the address.
+- phase69069 (totalSupply) — Global protocol counter representing total minted supply.
+
+Unlike traditional ERC-20 tokens, SOS69069 contains:
+
+- no "transfer()"
+- no "approve()"
+- no allowances
+- no burn function
+- no DEX integration
+- no ownership
+- no custody mechanism
+
+Tokens never move after being minted. Value is created only through new mint events and accumulates permanently.
+
+All protocol counters ("trustOf", "pushOf", and "phase69069") operate as cyclic "uint256" values. When reaching 2²⁵⁶ − 1, they wrap back to zero while permanent overflow counters preserve the complete lifetime history.
+
+---
+
+Balance Definition
+
+The effective protocol balance is defined as:
+
+Balance = trustOf − pushOf
+
+Where:
+
+- trustOf represents all SOS ever received.
+- pushOf represents all SOS ever pushed to others.
+
+A positive balance indicates an address has received more trust than it has distributed.
+
+A zero or negative effective position indicates the address has pushed as much as, or more than, it has received.
+
+---
+
+The Trust Gate
+
+SOS69069 replaces token transfers with forward minting.
+
+Minting is therefore the transfer mechanism, but it is governed by trust.
+
+A wallet may only mint forward when:
+
+trustOf > pushOf
+
+Receiving new mints increases "trustOf", expanding the wallet's future minting capacity.
+
+Every received mint therefore becomes newly available trust that can later be forwarded to another participant.
+
+This creates a natural reputation and credit system:
+
+1. Another participant mints SOS to you.
+2. Your "trustOf" increases.
+3. Once "trustOf > pushOf", you gain the ability to mint to someone else.
+4. Your push increases the recipient's "trustOf".
+5. The trust chain continues indefinitely.
+
+Self-pushes ("pushForMe()" or "pushTo(yourself)") are allowed and increase both "trustOf" and "pushOf".
+
+---
+
+Offers (Peer-to-Peer Exchange)
+
+Because SOS69069 contains no transfer function, buying and selling occur through Offers.
+
+Typical offers include:
+
+- "I will mint X SOS to you if you pay Y."
+- "I will pay Y if you mint X SOS to me."
+
+Participants settle these agreements by executing the required "pushTo()" transactions.
+
+The irreversible mint events themselves become the settlement record.
+
+No centralized custody, automated market maker, liquidity pool, or on-chain order book is required.
+
+---
+
+Wallet Recovery
+
+Recovery is performed entirely through verifiable mint activity.
+
+The recovery procedure is a social and protocol convention layered on top of the immutable blockchain history.
+
+Recovery process:
+
+1. Create a new wallet.
+2. From the new wallet, perform the first push to the original wallet.
+3. This first push permanently binds the two addresses.
+4. Continue pushing from the new wallet until its "pushOf" equals twice the old wallet's total push count.
+5. Once the 2× threshold is reached, the new wallet inherits the complete history and identity of the previous wallet.
+
+Recovery requires:
+
+- no recovery company
+- no seed phrase service
+- no multisignature administrator
+- no recovery deadline
+
+Only publicly verifiable on-chain mint activity determines recovery.
+
+---
+
+Why SOS Cannot Be Censored, Modified, or Seized
+
+All wallet state is reconstructed exclusively from:
+
+- permanent "Pushed" / "Transfer" events
+- "trustOf"
+- "pushOf"
+
+The contract:
+
+- accepts no ETH
+- has no owner
+- contains no administrator
+- has no pause function
+- has no blacklist
+- has no upgrade mechanism
+
+Since existing balances never move and new value appears only through irreversible mint events, the protocol contains no mechanism for third parties to confiscate, reverse, or rewrite existing balances.
+
+---
+
+Wallet Interface
+
+An SOS Wallet displays only protocol data:
+
+- Current "trustOf"
+- Current "pushOf"
+- Effective balance ("trustOf − pushOf")
+- Complete history of every mint sent and received
+- Active peer-to-peer offers
+- Recovery progress when binding a replacement wallet
+
+Everything else—including:
+
+- Name: 69069
+- Symbol: SOS
+- Decimals: 0
+- ERC-20-compatible interface
+
+exists solely to allow conventional wallets, block explorers, and blockchain tools to recognize and display the protocol.
+
+The protocol itself is entirely defined by forward minting.
+
+---
+
+Summary
+
+The SOS Wallet does not transfer ownership of tokens.
+
+Instead:
+
+- Minting is the transfer mechanism.
+- Trust determines who may mint forward.
+- Balance equals "trustOf − pushOf".
+- Recovery is performed through verifiable mint activity.
+- All protocol state exists permanently as immutable on-chain mint history.
+
+SOS69069 is therefore not a transfer-based token system, but a forward-mint participation protocol in which reputation, balance, and recovery are all derived from irreversible mint events.If you'd like, I can also rewrite this as a polished whitepaper section or technical specification while preserving the same protocol rules.
