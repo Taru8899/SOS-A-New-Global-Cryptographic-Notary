@@ -1,0 +1,314 @@
+SOS Wallet Development Specification
+
+Project Goal
+
+Create a mobile cryptocurrency wallet based on an existing open-source Ethereum wallet framework (for example MetaMask Mobile, Trust Wallet Core, or another compatible wallet SDK).
+
+The wallet must keep the standard blockchain security model (private keys remain controlled by the user) but replace the traditional ERC-20 token experience with the SOS69069 protocol model.
+
+The wallet is not a normal token wallet. It is a dedicated interface for the SOS69069 mint-based protocol.
+
+---
+
+1. Keep Existing Wallet Functions
+
+Reuse the existing wallet engine:
+
+- Wallet creation
+- Seed phrase generation
+- Seed phrase backup
+- Private key encryption
+- Secure local storage
+- Wallet import/export
+- Transaction signing
+- Ethereum network connection
+- RPC communication
+- Address management
+
+Do not redesign cryptographic wallet security.
+
+---
+
+2. Remove or Disable Traditional Token Functions
+
+The SOS Wallet should not focus on:
+
+- Token transfers
+- ERC-20 approvals
+- Allowance management
+- DEX swaps
+- Liquidity pools
+- Staking
+- Lending
+- DeFi integrations
+
+SOS69069 does not use traditional token movement.
+
+---
+
+3. SOS69069 Contract Integration
+
+Connect the wallet directly to the deployed SOS69069 contract.
+
+Required contract reads:
+
+trustOf(address)
+pushOf(address)
+balanceOf(address)
+totalSupply()
+
+Required contract actions:
+
+pushTo(address receiver)
+
+pushForMe()
+
+---
+
+4. Main Wallet Screen
+
+Replace the traditional token balance screen.
+
+Display:
+
+User Address
+
+Example:
+
+0x1234....
+
+Trust Received
+
+trustOf = X
+
+Meaning:
+
+Total number of SOS mints received.
+
+Push Sent
+
+pushOf = X
+
+Meaning:
+
+Total number of SOS pushes created.
+
+Effective Balance
+
+Calculate:
+
+Balance = trustOf - pushOf
+
+Display:
+
+Available SOS Trust Balance
+
+---
+
+5. Mint Function
+
+Create a main action button:
+
+[MINT SOS]
+
+Flow:
+
+1. User selects receiver address.
+2. Wallet checks:
+
+trustOf > pushOf
+
+3. Wallet creates transaction:
+
+pushTo(receiver)
+
+4. User signs transaction.
+5. Transaction is broadcast.
+6. Wallet updates balance.
+
+---
+
+6. Self Mint
+
+Support:
+
+pushForMe()
+
+Display:
+
+Mint to myself
+
+Self-mint increases:
+
+trustOf
+pushOf
+
+---
+
+7. Mint History
+
+Create a protocol activity screen.
+
+Show:
+
+- Incoming pushes
+- Outgoing pushes
+- Block number
+- Timestamp
+- Sender
+- Receiver
+- Transaction hash
+
+The history is reconstructed from blockchain events.
+
+---
+
+8. Trust Gate Display
+
+Show user's current ability:
+
+Example:
+
+Trust:
+1000
+
+Push:
+400
+
+Status:
+CAN MINT
+
+Available capacity:
+600
+
+If:
+
+trustOf <= pushOf
+
+Display:
+
+Cannot mint forward.
+Receive more SOS trust first.
+
+---
+
+9. SOS Offers Marketplace
+
+Create an offer system.
+
+Users can create:
+
+Example:
+
+SELL OFFER
+
+I will mint:
+100 SOS
+
+Required payment:
+10 USDC
+
+Expiration:
+24 hours
+
+Offers are not token transfers.
+
+Settlement happens when users execute:
+
+pushTo()
+
+transactions.
+
+The offer system only coordinates users.
+
+---
+
+10. Recovery Module
+
+Create recovery interface.
+
+Inputs:
+
+Old wallet address:
+
+0xOLD
+
+New wallet address:
+
+0xNEW
+
+Display:
+
+Old wallet:
+
+pushOf = 10000
+
+Requirement:
+
+Recovery target = 20000 pushes
+
+New wallet:
+
+Current pushOf = 15000
+
+Progress:
+
+75%
+
+Recovery complete when:
+
+new pushOf >= old pushOf × 2
+
+---
+
+11. Security Requirements
+
+The wallet must:
+
+- Never expose private keys
+- Store keys encrypted
+- Require user confirmation for every transaction
+- Clearly show receiver address before signing
+- Prevent fake SOS contracts
+- Verify official SOS69069 contract address
+- Prevent phishing through fake offers
+- Show blockchain confirmation status
+
+---
+
+12. Recommended Technology
+
+Mobile:
+
+- React Native (similar architecture to MetaMask)
+  or
+- Flutter
+
+Blockchain:
+
+- ethers.js
+- WalletConnect
+- Ethereum RPC
+
+Backend (optional):
+
+- Node.js
+- Database for offers
+- IPFS/Waku/XMTP for decentralized communication
+
+---
+
+Final Product Definition
+
+The finished application is:
+
+A secure Ethereum wallet where:
+
+- The user controls private keys.
+- SOS balances are calculated from mint history.
+- Minting replaces transferring.
+- Trust received unlocks future minting.
+- Recovery is based on protocol activity.
+- No centralized authority controls balances.
+
+The wallet is a user interface for the SOS69069 protocol, not a traditional ERC-20 wallet.
